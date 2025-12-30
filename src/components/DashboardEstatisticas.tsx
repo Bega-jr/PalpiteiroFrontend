@@ -20,7 +20,7 @@ const DashboardEstatisticas = () => {
     const fetchEstatisticas = async () => {
       try {
         // ✅ Ajuste de URL e Rota (verifique se a rota no python é /estatisticas)
-        const response = await fetch('palpiteiro-backend.vercel.app');
+        const response = await fetch('https://palpiteiro-backend.vercel.app/');
         const data = await response.json();
         
         // ✅ Garantia 2: Proteção contra objeto não iterável
