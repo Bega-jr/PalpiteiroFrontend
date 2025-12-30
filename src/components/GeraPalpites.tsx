@@ -16,22 +16,18 @@ const GeraPalpites = () => {
   const [palpites, setPalpites] = useState<Palpite[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const fetchPalpites = async () => {
+    const fetchPalpites = async () => {
     setLoading(true);
     try {
-      // 1. URL Corrigida (Ajuste '/palpites' para o nome da sua rota no Python)
+      // 1. URL corrigida apontando para a rota de estatísticos
       const response = await fetch('palpiteiro-backend.vercel.app');
       const data = await response.json();
 
-      // 2. PROTEÇÃO: Verifica se a resposta contém a lista de palpites
-      // Se o backend enviar {"palpites": [...]}, pegamos a lista.
-      if (data && Array.isArray(data.palpites)) {
+      // 2. Acessa data.palpites (o objeto retornado pelo FastAPI tem essa chave)
+      if (data && data.status === "ok" && Array.isArray(data.palpites)) {
         setPalpites(data.palpites);
-      } else if (Array.isArray(data)) {
-        // Se o backend enviar diretamente uma lista [...]
-        setPalpites(data);
       } else {
-        console.error("Formato de dados inesperado:", data);
+        console.warn("Formato inesperado ou lista vazia:", data);
         setPalpites([]);
       }
     } catch (error) {
@@ -41,6 +37,7 @@ const GeraPalpites = () => {
       setLoading(false);
     }
   };
+
 
   useEffect(() => {
     fetchPalpites();
