@@ -21,11 +21,10 @@ const ResultadosOficiais = () => {
   const [loading, setLoading] = useState(true);
 
   const fetchResultados = async () => {
-  // Se houver algo no campo de busca que NÃO seja um número, não faça a requisição
-  if (busca && isNaN(Number(busca))) {
-    console.warn("A busca deve ser um número inteiro.");
-    return;
-  }
+  const response = await fetch(`${API_URL}/ultimos-concursos`);
+  const data = await response.json();
+  setConcursos(data);
+};
 
   // URL dinâmica: se busca estiver vazia, chama 'ultimo', senão chama o número
   const url = busca.trim() === "" 
