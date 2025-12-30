@@ -28,7 +28,7 @@ const HistoricoJogos = () => {
 
     try {
       // ✅ Ajuste 1: URL corrigida com protocolo e rota (Ajuste /historico se necessário)
-      const response = await fetch('palpiteiro-backend.vercel.app', {
+      const response = await fetch('https://palpiteiro-backend.vercel.app', {
         headers: {
           'Authorization': `Bearer ${session.access_token}`
         }
