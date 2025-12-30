@@ -10,26 +10,66 @@ import { Clover, RefreshCw, Star, Info } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
+/* =========================
+   Tipagens reais da API
+========================= */
+
+interface PalpiteEstatistico {
+  numeros: number[];
+  estatistica: {
+    metricas: {
+      soma: number;
+      pares: number;
+      impares: number;
+      primos: number;
+      moldura?: number;
+      centro?: number;
+    };
+  };
+  score_medio: number;
+}
+
+interface RespostaPalpitesEstatisticos {
+  status: string;
+  tipo: string;
+  palpites: PalpiteEstatistico[];
+}
+
+interface RespostaPalpiteFixo {
+  palpite: number[];
+  score_medio: number;
+}
+
+/* ========================= */
+
 export default function Palpites() {
   const { toast } = useToast();
   const [refreshKey, setRefreshKey] = useState(0);
 
+  /* 🔹 Palpite Fixo */
   const {
     data: palpiteFixo,
     isLoading: loadingFixo,
     refetch: refetchFixo,
-  } = useQuery({
+  } = useQuery<RespostaPalpiteFixo>({
     queryKey: ["palpiteFixo", refreshKey],
-    queryFn: () => api.getPalpiteFixo(),
+    queryFn: async () => {
+      const { data } = await api.get("/palpites/fixo");
+      return data;
+    },
   });
 
+  /* 🔹 Palpites Estatísticos */
   const {
     data: palpitesEstatisticos,
     isLoading: loadingEstatisticos,
     refetch: refetchEstatisticos,
-  } = useQuery({
+  } = useQuery<RespostaPalpitesEstatisticos>({
     queryKey: ["palpitesEstatisticos", refreshKey],
-    queryFn: () => api.getPalpitesEstatisticos(),
+    queryFn: async () => {
+      const { data } = await api.get("/palpites/estatisticos");
+      return data;
+    },
   });
 
   const handleRefresh = async () => {
@@ -53,34 +93,32 @@ export default function Palpites() {
     <Layout>
       {/* Header */}
       <section className="gradient-hero text-primary-foreground py-12 md:py-16">
-        <div className="container">
-          <div className="max-w-2xl">
-            <h1 className="font-display text-3xl md:text-4xl font-bold mb-4">
-              Palpites Estatísticos
-            </h1>
-            <p className="text-white/80">
-              Palpites gerados por algoritmo inteligente que analisa frequência,
-              atraso e ciclos de cada número. Filtros profissionais garantem
-              diversidade e equilíbrio.
-            </p>
-          </div>
+        <div className="container max-w-2xl">
+          <h1 className="font-display text-3xl md:text-4xl font-bold mb-4">
+            Palpites Estatísticos
+          </h1>
+          <p className="text-white/80">
+            Palpites gerados por algoritmo inteligente baseado em estatística real
+            da Lotofácil.
+          </p>
         </div>
       </section>
 
       <div className="container py-8 md:py-12 space-y-8">
-        {/* Refresh Button */}
+
+        {/* Botão atualizar */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Info className="h-4 w-4" />
-            Clique em "Gerar Novos" para atualizar os palpites
+            Clique para gerar novos palpites
           </div>
           <Button onClick={handleRefresh} variant="outline">
             <RefreshCw className="mr-2 h-4 w-4" />
-            Gerar Novos Palpites
+            Gerar Novos
           </Button>
         </div>
 
-        {/* Palpite Fixo do Dia */}
+        {/* Palpite Fixo */}
         <section>
           <div className="flex items-center gap-2 mb-4">
             <Star className="h-5 w-5 text-lottery-gold" />
@@ -89,9 +127,10 @@ export default function Palpites() {
             </h2>
             <Badge variant="secondary">Destaque</Badge>
           </div>
+
           {loadingFixo ? (
             <LoadingCard />
-          ) : palpiteFixo ? (
+          ) : palpiteFixo?.palpite ? (
             <PalpiteCard
               numeros={palpiteFixo.palpite}
               scoreMedio={palpiteFixo.score_medio}
@@ -108,48 +147,7 @@ export default function Palpites() {
           )}
         </section>
 
-        {/* Filtros Aplicados */}
-        {palpitesEstatisticos?.filtros_aplicados && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-medium flex items-center gap-2">
-                <Clover className="h-4 w-4 text-primary" />
-                Filtros Aplicados
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="outline">
-                  Soma: {palpitesEstatisticos.filtros_aplicados.soma_range[0]}-
-                  {palpitesEstatisticos.filtros_aplicados.soma_range[1]}
-                </Badge>
-                <Badge variant="outline">
-                  Pares: {palpitesEstatisticos.filtros_aplicados.pares_range[0]}-
-                  {palpitesEstatisticos.filtros_aplicados.pares_range[1]}
-                </Badge>
-                <Badge variant="outline">
-                  Primos: {palpitesEstatisticos.filtros_aplicados.primos_range[0]}-
-                  {palpitesEstatisticos.filtros_aplicados.primos_range[1]}
-                </Badge>
-                <Badge variant="outline">
-                  Moldura: {palpitesEstatisticos.filtros_aplicados.moldura_range[0]}-
-                  {palpitesEstatisticos.filtros_aplicados.moldura_range[1]}
-                </Badge>
-                <Badge variant="outline">
-                  Max Repetidos: {palpitesEstatisticos.filtros_aplicados.max_repetidos}
-                </Badge>
-                <Badge variant="outline">
-                  Max Sequência: {palpitesEstatisticos.filtros_aplicados.max_sequencia}
-                </Badge>
-                <Badge variant="outline">
-                  Score Mínimo: {palpitesEstatisticos.filtros_aplicados.score_minimo}
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* 7 Palpites Estatísticos */}
+        {/* Palpites Estatísticos */}
         <section>
           <div className="flex items-center gap-2 mb-4">
             <Clover className="h-5 w-5 text-primary" />
@@ -157,13 +155,14 @@ export default function Palpites() {
               7 Palpites Estatísticos
             </h2>
           </div>
+
           {loadingEstatisticos ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {Array.from({ length: 7 }).map((_, i) => (
                 <LoadingCard key={i} />
               ))}
             </div>
-          ) : palpitesEstatisticos?.palpites ? (
+          ) : palpitesEstatisticos?.palpites?.length ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {palpitesEstatisticos.palpites.map((palpite, index) => (
                 <PalpiteCard
@@ -171,7 +170,7 @@ export default function Palpites() {
                   index={index}
                   numeros={palpite.numeros}
                   scoreMedio={palpite.score_medio}
-                  metricas={palpite.metricas}
+                  metricas={palpite.estatistica?.metricas}
                   showSaveButton
                   onSave={() => handleSave(palpite.numeros)}
                 />
@@ -180,7 +179,7 @@ export default function Palpites() {
           ) : (
             <Card>
               <CardContent className="p-6 text-center text-muted-foreground">
-                Não foi possível carregar os palpites estatísticos.
+                Nenhum palpite estatístico disponível.
               </CardContent>
             </Card>
           )}
