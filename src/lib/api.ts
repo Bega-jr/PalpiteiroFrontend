@@ -1,18 +1,8 @@
 import axios from "axios";
 
-/**
- * Base URL do backend
- * Exemplo:
- * https://palpiteiro-backend.vercel.app
- */
-const API_URL =
-  import.meta.env.VITE_API_URL ||
-  "https://palpiteiro-backend.vercel.app";
+const API_URL = import.meta.env.VITE_API_URL || "https://palpiteiro-backend.vercel.app";
 
-/**
- * Instância principal do Axios
- */
-const axiosInstance = axios.create({
+export const api = axios.create({
   baseURL: API_URL,
   timeout: 15000,
   headers: {
@@ -20,46 +10,39 @@ const axiosInstance = axios.create({
   },
 });
 
-/**
- * Interceptor de erro (debug)
- */
-axiosInstance.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    console.error("Erro API:", error?.response || error);
-    return Promise.reject(error);
-  }
-);
-
-/**
- * API tipada usada no projeto
- */
-export const api = {
-  /**
-   * Palpite fixo do dia
-   * ⚠️ Ajuste a rota se o backend mudar
-   */
-  getPalpiteFixo: async () => {
-    const response = await axiosInstance.get("/palpites/fixo");
-    return response.data;
-  },
-
-  /**
-   * Palpites estatísticos
-   */
-  getPalpitesEstatisticos: async () => {
-    const response = await axiosInstance.get("/palpites/estatisticos");
-    return response.data;
-  },
-
-  /**
-   * Estatísticas base (frequência / atraso)
-   * (caso você use em outra tela)
-   */
-  getEstatisticasBase: async () => {
-    const response = await axiosInstance.get("/estatisticas/base");
-    return response.data.dados;
-  },
+// GET PALPITE FIXO
+export const getPalpiteFixo = async () => {
+  const resp = await api.get("/palpites/fixo");
+  return resp.data;
 };
 
-export default api;
+// GET PALPITES ESTATÍSTICOS
+export const getPalpitesEstatisticos = async () => {
+  const resp = await api.get("/palpites/estatisticos");
+  return resp.data;
+};
+
+// GET HISTÓRICO DE PALPITES
+export const getHistorico = async () => {
+  const resp = await api.get("/historico/");
+  return resp.data;
+};
+
+// POST SALVAR PALPITE
+export const postSalvarPalpite = async (numeros: number[]) => {
+  const resp = await api.post("/historico/registrar", {
+    id: crypto.randomUUID(),
+    data: new Date().toISOString(),
+    tipo: "estatistico",
+    numeros,
+    valor_aposta: 3,
+  });
+  return resp.data;
+};
+
+export default {
+  getPalpiteFixo,
+  getPalpitesEstatisticos,
+  getHistorico,
+  postSalvarPalpite,
+};
