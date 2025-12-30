@@ -10,12 +10,18 @@ import { useToast } from "@/hooks/use-toast";
 import api from "@/lib/api";
 
 /* =========================
-   Tipagens (Interfaces)
+   Tipagens Corrigidas
 ========================= */
+// Resposta real do /palpites/fixo
+interface RespostaPalpiteFixo {
+  numeros: number[];
+  score_medio: number;
+}
 
+// Resposta real do /palpites/estatisticos
 interface PalpiteEstatistico {
   numeros: number[];
-  estatistica?: {
+  estatistica: {
     metricas: {
       soma: number;
       pares: number;
@@ -27,18 +33,10 @@ interface PalpiteEstatistico {
 }
 
 interface RespostaPalpitesEstatisticos {
-  status?: string;
-  tipo?: string;
   palpites: PalpiteEstatistico[];
 }
 
-interface RespostaPalpiteFixo {
-  palpite: number[];
-  score_medio: number;
-}
-
 /* ========================= */
-
 export default function Palpites() {
   const { toast } = useToast();
   const [refreshKey, setRefreshKey] = useState(0);
@@ -52,8 +50,8 @@ export default function Palpites() {
     queryKey: ["palpite-fixo", refreshKey],
     queryFn: async () => {
       const response = await api.get("/palpites/fixo");
-      console.log("DEBUG - Resposta Fixo:", response.data);
-      return response.data;
+      console.log("DEBUG - Palpite Fixo:", response.data);
+      return response.data; // Já vem com { numeros, score_medio }
     },
     staleTime: 0,
   });
@@ -67,8 +65,8 @@ export default function Palpites() {
     queryKey: ["palpites-estatisticos", refreshKey],
     queryFn: async () => {
       const response = await api.get("/palpites/estatisticos");
-      console.log("DEBUG - Resposta Estatisticos:", response.data);
-      return response.data;
+      console.log("DEBUG - Palpites Estatísticos:", response.data);
+      return response.data; // Já vem com { palpites: [...] }
     },
     staleTime: 0,
   });
@@ -78,7 +76,7 @@ export default function Palpites() {
     await Promise.all([refetchFixo(), refetchEstatisticos()]);
     toast({
       title: "Palpites atualizados!",
-      description: "Novos palpites foram gerados com sucesso para 2025.",
+      description: "Novos palpites foram gerados com sucesso.",
     });
   };
 
@@ -99,13 +97,12 @@ export default function Palpites() {
             Palpites Estatísticos
           </h1>
           <p className="text-white/80">
-            Palpites gerados por algoritmo estatístico da Lotofácil (Dados de 2025).
+            Palpites gerados por algoritmo estatístico da Lotofácil (Dados atualizados).
           </p>
         </div>
       </section>
 
       <div className="container py-10 space-y-10">
-
         {/* Botão Atualizar */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -123,15 +120,15 @@ export default function Palpites() {
           <div className="flex items-center gap-2 mb-4">
             <Star className="h-5 w-5 text-yellow-400" />
             <h2 className="text-xl font-bold">Palpite Fixo</h2>
-            <Badge>Destaque</Badge>
+            <Badge variant="default">Destaque</Badge>
           </div>
 
           {loadingFixo ? (
             <LoadingCard />
-          ) : palpiteFixo && (palpiteFixo.palpite || (palpiteFixo as any).numeros) ? (
+          ) : palpiteFixo && palpiteFixo.numeros && palpiteFixo.numeros.length > 0 ? (
             <PalpiteCard
-              numeros={palpiteFixo.palpite || (palpiteFixo as any).numeros || []}
-              scoreMedio={palpiteFixo.score_medio || 0}
+              numeros={palpiteFixo.numeros}
+              scoreMedio={palpiteFixo.score_medio}
               highlight
               showSaveButton
               onSave={handleSave}
@@ -139,7 +136,7 @@ export default function Palpites() {
           ) : (
             <div className="p-6 border rounded-lg bg-muted/20 text-center">
               <p className="text-muted-foreground text-sm">
-                Não foi possível carregar o palpite fixo. Verifique a API.
+                Não foi possível carregar o palpite fixo. Tente atualizar.
               </p>
             </div>
           )}
@@ -156,21 +153,19 @@ export default function Palpites() {
 
           {loadingEstatisticos ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {Array.from({ length: 3 }).map((_, i) => (
+              {Array.from({ length: 7 }).map((_, i) => (
                 <LoadingCard key={i} />
               ))}
             </div>
-          ) : (palpitesEstatisticos?.palpites && Array.isArray(palpitesEstatisticos.palpites)) ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          ) : palpitesEstatisticos?.palpites && palpitesEstatisticos.palpites.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {palpitesEstatisticos.palpites.map((palpite, index) => (
                 <PalpiteCard
                   key={`palpite-${index}`}
-                  index={index}
-                  // Se 'numeros' vier nulo, envia array vazio para não quebrar o .map no componente filho
-                  numeros={palpite?.numeros || []}
-                  scoreMedio={palpite?.score_medio || 0}
-                  // Acesso seguro às métricas
-                  metricas={palpite?.estatistica?.metricas}
+                  index={index + 1}
+                  numeros={palpite.numeros}
+                  scoreMedio={palpite.score_medio}
+                  metricas={palpite.estatistica.metricas}
                   showSaveButton
                   onSave={handleSave}
                 />
@@ -179,7 +174,7 @@ export default function Palpites() {
           ) : (
             <div className="p-6 border rounded-lg bg-muted/20 text-center">
               <p className="text-muted-foreground text-sm">
-                Nenhum palpite estatístico disponível no momento.
+                Nenhum palpite estatístico disponível no momento. Tente atualizar.
               </p>
             </div>
           )}
@@ -188,4 +183,3 @@ export default function Palpites() {
     </Layout>
   );
 }
-
