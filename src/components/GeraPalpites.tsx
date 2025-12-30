@@ -20,7 +20,7 @@ const GeraPalpites = () => {
     setLoading(true);
     try {
       // 1. URL corrigida apontando para a rota de estatísticos
-      const response = await fetch('palpiteiro-backend.vercel.app');
+      const response = await fetch('https://palpiteiro-backend.vercel.app/');
       const data = await response.json();
 
       // 2. Acessa data.palpites (o objeto retornado pelo FastAPI tem essa chave)
