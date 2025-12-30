@@ -5,12 +5,12 @@ import { LoadingCard } from "@/components/LoadingStates";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Clover, RefreshCw, Star, Info } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import api from "@/lib/api";
 
 /* =========================
-   Tipagens
+   Tipagens (Interfaces)
 ========================= */
 
 interface PalpiteEstatistico {
@@ -27,8 +27,8 @@ interface PalpiteEstatistico {
 }
 
 interface RespostaPalpitesEstatisticos {
-  status: string;
-  tipo: string;
+  status?: string;
+  tipo?: string;
   palpites: PalpiteEstatistico[];
 }
 
@@ -48,13 +48,16 @@ export default function Palpites() {
     data: palpiteFixo,
     isLoading: loadingFixo,
     refetch: refetchFixo,
+    error: errorFixo
   } = useQuery<RespostaPalpiteFixo>({
     queryKey: ["palpite-fixo", refreshKey],
     queryFn: async () => {
-      const { data } = await api.get("/palpites/fixo");
-      return data;
+      // Forçamos a captura da resposta bruta para debug
+      const response = await api.get("/palpites/fixo");
+      console.log("DEBUG API (Fixo):", response.data);
+      return response.data;
     },
-    staleTime: 1000 * 60 * 5, // 5 minutos (cache)
+    staleTime: 0, // Resetamos para teste para garantir que busque sempre
   });
 
   /* 🔹 Palpites Estatísticos */
@@ -62,21 +65,29 @@ export default function Palpites() {
     data: palpitesEstatisticos,
     isLoading: loadingEstatisticos,
     refetch: refetchEstatisticos,
+    error: errorEstatisticos
   } = useQuery<RespostaPalpitesEstatisticos>({
     queryKey: ["palpites-estatisticos", refreshKey],
     queryFn: async () => {
-      const { data } = await api.get("/palpites/estatisticos");
-      return data;
+      const response = await api.get("/palpites/estatisticos");
+      console.log("DEBUG API (Estatísticos):", response.data);
+      return response.data;
     },
-    staleTime: 1000 * 60 * 5,
+    staleTime: 0,
   });
+
+  // Monitor de erros no console
+  useEffect(() => {
+    if (errorFixo) console.error("Erro na query Fixo:", errorFixo);
+    if (errorEstatisticos) console.error("Erro na query Estatísticos:", errorEstatisticos);
+  }, [errorFixo, errorEstatisticos]);
 
   const handleRefresh = async () => {
     setRefreshKey((prev) => prev + 1);
     await Promise.all([refetchFixo(), refetchEstatisticos()]);
     toast({
-      title: "Palpites atualizados!",
-      description: "Novos palpites foram gerados com sucesso.",
+      title: "Atualizando...",
+      description: "Buscando novos dados nos servidores.",
     });
   };
 
@@ -90,25 +101,29 @@ export default function Palpites() {
 
   return (
     <Layout>
-      {/* Header */}
       <section className="gradient-hero text-primary-foreground py-12">
         <div className="container max-w-2xl">
-          <h1 className="text-3xl font-bold mb-4">
-            Palpites Estatísticos
-          </h1>
-          <p className="text-white/80">
-            Palpites gerados por algoritmo estatístico da Lotofácil.
-          </p>
+          <h1 className="text-3xl font-bold mb-4">Palpites Estatísticos</h1>
+          <p className="text-white/80">Palpites gerados por algoritmo estatístico da Lotofácil.</p>
         </div>
       </section>
 
       <div className="container py-10 space-y-10">
+        
+        {/* Bloco de Debug (Pode apagar após testar) */}
+        <div className="p-4 bg-slate-100 rounded-md border border-slate-300 text-xs font-mono overflow-auto max-h-40">
+          <p className="font-bold text-slate-700">DEBUG PANEL:</p>
+          <pre>{JSON.stringify({ 
+            hasFixo: !!palpiteFixo, 
+            hasEstatisticos: !!palpitesEstatisticos?.palpites?.length,
+            fixoDataSample: palpiteFixo?.palpite ? "OK" : "VAZIO"
+          }, null, 2)}</pre>
+        </div>
 
-        {/* Atualizar */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Info className="h-4 w-4" />
-            Gerar novos palpites
+            Gerar novos palpites para 2025
           </div>
           <Button onClick={handleRefresh} variant="outline">
             <RefreshCw className="mr-2 h-4 w-4" />
@@ -126,18 +141,18 @@ export default function Palpites() {
 
           {loadingFixo ? (
             <LoadingCard />
-          ) : palpiteFixo?.palpite ? (
+          ) : (palpiteFixo && (palpiteFixo.palpite || (palpiteFixo as any).numeros)) ? (
             <PalpiteCard
-              numeros={palpiteFixo.palpite}
+              numeros={palpiteFixo.palpite || (palpiteFixo as any).numeros}
               scoreMedio={palpiteFixo.score_medio}
               highlight
               showSaveButton
               onSave={handleSave}
             />
           ) : (
-            <p className="text-muted-foreground">
-              Não foi possível carregar o palpite fixo.
-            </p>
+            <div className="p-8 border border-dashed rounded-lg text-center">
+              <p className="text-muted-foreground">O palpite fixo não pôde ser carregado ou o formato está incorreto.</p>
+            </div>
           )}
         </section>
 
@@ -145,9 +160,7 @@ export default function Palpites() {
         <section>
           <div className="flex items-center gap-2 mb-4">
             <Clover className="h-5 w-5 text-primary" />
-            <h2 className="text-xl font-bold">
-              7 Palpites Estatísticos
-            </h2>
+            <h2 className="text-xl font-bold">7 Palpites Estatísticos</h2>
           </div>
 
           {loadingEstatisticos ? (
@@ -164,16 +177,16 @@ export default function Palpites() {
                   index={index}
                   numeros={palpite.numeros}
                   scoreMedio={palpite.score_medio}
-                  metricas={palpite.estatistica.metricas}
+                  metricas={palpite.estatistica?.metricas}
                   showSaveButton
                   onSave={handleSave}
                 />
               ))}
             </div>
           ) : (
-            <p className="text-muted-foreground">
-              Nenhum palpite estatístico disponível.
-            </p>
+            <div className="p-8 border border-dashed rounded-lg text-center">
+              <p className="text-muted-foreground">Nenhum palpite estatístico disponível no momento.</p>
+            </div>
           )}
         </section>
       </div>
