@@ -33,7 +33,12 @@ export function PalpiteCard({
   className,
   highlight = false,
 }: PalpiteCardProps) {
-  const sortedNumeros = [...numeros].sort((a, b) => a - b);
+  
+  // ✅ CORREÇÃO 1: Proteção contra 'numeros' não ser uma array
+  // Se 'numeros' vier como null ou objeto da API, o componente não quebra.
+  const sortedNumeros = Array.isArray(numeros) 
+    ? [...numeros].sort((a, b) => a - b) 
+    : [];
 
   return (
     <Card
@@ -62,15 +67,20 @@ export function PalpiteCard({
       <CardContent className="space-y-4">
         {/* Números do palpite */}
         <div className="flex flex-wrap gap-2 justify-center">
-          {sortedNumeros.map((num, i) => (
-            <LotteryBall
-              key={i}
-              number={num}
-              active
-              highlighted={highlight}
-              size="md"
-            />
-          ))}
+          {/* ✅ CORREÇÃO 2: .map protegido */}
+          {sortedNumeros.length > 0 ? (
+            sortedNumeros.map((num, i) => (
+              <LotteryBall
+                key={`${index}-ball-${i}`}
+                number={num}
+                active
+                highlighted={highlight}
+                size="md"
+              />
+            ))
+          ) : (
+            <p className="text-xs text-muted-foreground italic">Nenhum número disponível</p>
+          )}
         </div>
 
         {/* Métricas */}
