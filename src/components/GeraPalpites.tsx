@@ -18,20 +18,20 @@ const GeraPalpites = () => {
   const [loading, setLoading] = useState(false);
 
   const fetchPalpites = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(`${API_URL}/palpites/estatistico`);
-      const json = await response.json();
+  setLoading(true);
+  try {
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/palpites/estatistico`
+    );
+    const data = await response.json();
 
-      // ✅ CORREÇÃO CRÍTICA
-      setPalpites(Array.isArray(json.palpites) ? json.palpites : []);
-    } catch (error) {
-      console.error("Erro ao gerar palpites:", error);
-      setPalpites([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+    setPalpites(data.palpites || []);
+  } catch (error) {
+    console.error("Erro ao gerar palpites:", error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchPalpites();
