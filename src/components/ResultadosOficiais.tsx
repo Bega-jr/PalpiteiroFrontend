@@ -20,33 +20,30 @@ const ResultadosOficiais = () => {
   const [busca, setBusca] = useState("");
   const [loading, setLoading] = useState(true);
 
-  const fetchResultados = async (p: number) => {
-    setLoading(true);
-    try {
-      const response = await fetch(`${API_URL}/resultados?page=${p}`);
+  const fetchResultados = async () => {
+  // Se houver algo no campo de busca que NÃO seja um número, não faça a requisição
+  if (busca && isNaN(Number(busca))) {
+    console.warn("A busca deve ser um número inteiro.");
+    return;
+  }
 
-      if (!response.ok) {
-        throw new Error("Erro ao buscar resultados");
-      }
+  // URL dinâmica: se busca estiver vazia, chama 'ultimo', senão chama o número
+  const url = busca.trim() === "" 
+    ? `palpiteiro-backend.vercel.app`
+    : `palpiteiro-backend.vercel.app{parseInt(busca)}`;
 
-      const data = await response.json();
-
-      // 🔒 GARANTIA DE ARRAY
-      if (Array.isArray(data)) {
-        setConcursos(data);
-      } else if (Array.isArray(data.resultados)) {
-        setConcursos(data.resultados);
-      } else {
-        setConcursos([]);
-      }
-
-    } catch (error) {
-      console.error("Erro ao buscar resultados:", error);
-      setConcursos([]);
-    } finally {
-      setLoading(false);
+  try {
+    const response = await fetch(url);
+    if (response.status === 422) {
+      console.error("Erro 422: Parâmetro inválido enviado ao servidor.");
+      return;
     }
-  };
+    // ... resto do seu código
+  } catch (error) {
+    console.error(error);
+  }
+};
+
 
   useEffect(() => {
     fetchResultados(pagina);
