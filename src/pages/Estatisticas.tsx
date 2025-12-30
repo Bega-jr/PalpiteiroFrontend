@@ -30,26 +30,37 @@ import { BarChart3, TrendingUp, Clock, Zap, Target } from "lucide-react";
 
 /* =========================
    Tipagem real da API
+   Assumimos que o backend já envia exatamente isso
 ========================= */
 interface EstatisticaBase {
   numero: number;
   frequencia: number;
   atraso: number;
   score: number;
+  isTop?: boolean; // Adicionado para uso nos gráficos
+  isHot?: boolean; // Adicionado para uso nos gráficos
 }
 
+// A resposta da API agora é um array direto, não um objeto com a chave 'dados'
+type RespostaAPI = EstatisticaBase[]; 
+
+
 export default function Estatisticas() {
-  const { data: resposta, isLoading } = useQuery({
+  const { data: stats, isLoading } = useQuery<RespostaAPI>({
     queryKey: ["estatisticasBase"],
     queryFn: async () => {
       const { data } = await api.get(
-        "https://palpiteiro-backend.vercel.app/estatisticas/base"
+        "palpiteiro-backend.vercel.app"
       );
+      console.log("DEBUG Estatísticas (Dados Brutos):", data); // Verifique o console!
+      // Retorna a data diretamente, sem acessar 'data.dados'
       return data;
     },
+    staleTime: 1000 * 60 * 10, // Cache de 10 minutos
   });
 
-  if (isLoading) {
+  // Se não houver dados, exibe loading ou mensagem de erro
+  if (isLoading || !stats) {
     return (
       <Layout>
         <section className="gradient-hero text-primary-foreground py-12 md:py-16">
@@ -63,43 +74,36 @@ export default function Estatisticas() {
           </div>
         </section>
         <div className="container py-8">
-          <LoadingStats />
+          {isLoading ? <LoadingStats /> : <p className="text-center text-muted-foreground">Nenhuma estatística disponível.</p>}
         </div>
       </Layout>
     );
   }
 
   /* =========================
-     Normalização dos dados
+     Dados Prontos para Exibição
   ========================= */
-  const rawStats = resposta?.dados || [];
-
-  // Criação de score dinâmico (fallback inteligente)
-  const stats: EstatisticaBase[] = rawStats.map((s: any) => ({
-    ...s,
-    score: s.frequencia / (s.atraso + 1),
-  }));
-
-  // Ranking por score
+  
+  // Ranking por score (apenas ordenamos para exibição)
   const sortedByScore = [...stats].sort((a, b) => b.score - a.score);
   const top10 = sortedByScore.slice(0, 10);
 
-  // Dados para gráfico de frequência
+  // Dados para gráfico de frequência (ordenados por número)
   const frequenciaData = [...stats]
     .sort((a, b) => a.numero - b.numero)
-    .map((s) => ({
+    .map(s => ({
+      ...s,
       numero: s.numero.toString().padStart(2, "0"),
-      frequencia: s.frequencia,
-      isTop: top10.some((t) => t.numero === s.numero),
+      isTop: top10.some(t => t.numero === s.numero),
     }));
 
-  // Dados para gráfico de atraso
+  // Dados para gráfico de atraso (ordenados por número)
   const atrasoData = [...stats]
     .sort((a, b) => a.numero - b.numero)
-    .map((s) => ({
+    .map(s => ({
+      ...s,
       numero: s.numero.toString().padStart(2, "0"),
-      atraso: s.atraso,
-      isHot: s.atraso >= 5,
+      isHot: s.atraso >= 5, // Lógica simples de "quente"
     }));
 
   const chartConfig = {
@@ -131,7 +135,7 @@ export default function Estatisticas() {
       </section>
 
       <div className="container py-8 md:py-12 space-y-8">
-        {/* Resumo */}
+        {/* Resumo (Estes valores são fixos no seu código, não vieram da API) */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-6">
@@ -252,32 +256,26 @@ export default function Estatisticas() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>#</TableHead>
+                  <TableHead className="w-[100px]">#</TableHead>
                   <TableHead>Número</TableHead>
-                  <TableHead className="text-right">Frequência</TableHead>
-                  <TableHead className="text-right">Atraso</TableHead>
+                  <TableHead>Frequência</TableHead>
+                  <TableHead>Atraso (Concursos)</TableHead>
                   <TableHead className="text-right">Score</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedByScore.map((stat, index) => (
+                {top10.map((stat, index) => (
                   <TableRow key={stat.numero}>
-                    <TableCell>{index + 1}</TableCell>
+                    <TableCell className="font-medium">{index + 1}º</TableCell>
                     <TableCell>
-                      <LotteryBall number={stat.numero} size="sm" />
+                      <LotteryBall numero={stat.numero} />
                     </TableCell>
-                    <TableCell className="text-right">
-                      {stat.frequencia}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Badge
-                        variant={stat.atraso >= 5 ? "destructive" : "secondary"}
-                      >
-                        {stat.atraso}
+                    <TableCell>{stat.frequencia}x</TableCell>
+                    <TableCell>{stat.atraso}</TableCell>
+                    <TableCell className="text-right font-bold">
+                      <Badge variant="secondary">
+                        {stat.score.toFixed(2)}
                       </Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-mono">
-                      {stat.score.toFixed(2)}
                     </TableCell>
                   </TableRow>
                 ))}
