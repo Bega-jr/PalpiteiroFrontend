@@ -2,56 +2,81 @@
 
 import React, { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Search, Trophy } from "lucide-react";
+import { LotteryBall } from "@/components/LotteryBall"; // Importei o componente que você me passou
 
 interface Concurso {
   numero: number;
   data: string;
-  dezenas?: number[]; // 👈 pode vir indefinido
+  dezenas?: number[];
   ganhadores_15: number;
   valor_estimado?: string;
 }
 
-const API_URL = "https://palpiteiro-backend.vercel.app"; 
-// ⚠️ ajuste se a rota for diferente
+const API_BASE_URL = "https://palpiteiro-backend.vercel.app";
 
 const ResultadosOficiais = () => {
   const [concursos, setConcursos] = useState<Concurso[]>([]);
   const [pagina, setPagina] = useState(1);
   const [busca, setBusca] = useState("");
   const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState<string | null>(null);
 
-  const fetchResultados = async () => {
-  const response = await fetch(`${API_URL}/ultimos-concursos`);
-  const data = await response.json();
-  setConcursos(data);
-};
+  const fetchResultados = async (numeroPagina: number) => {
+    setLoading(true);
+    setErro(null);
+    try {
+      // URL para buscar a página específica do histórico
+      const url = `${API_BASE_URL}/ultimos-concursos?page=${numeroPagina}`;
+      console.log("DEBUG: Buscando URL:", url);
 
-  // URL dinâmica: se busca estiver vazia, chama 'ultimo', senão chama o número
-  const url = busca.trim() === "" 
-    ? `palpiteiro-backend.vercel.app`
-    : `palpiteiro-backend.vercel.app{parseInt(busca)}`;
+      const response = await fetch(url);
 
-  try {
-    const response = await fetch(url);
-    if (response.status === 422) {
-      console.error("Erro 422: Parâmetro inválido enviado ao servidor.");
-      return;
+      if (!response.ok) {
+        // Se a resposta não for OK (ex: 404, 500)
+        throw new Error(`Erro na API: ${response.statusText} (${response.status})`);
+      }
+
+      const data: Concurso[] = await response.json();
+      
+      console.log("DEBUG: Dados recebidos:", data);
+
+      if (data.length === 0 && numeroPagina > 1) {
+          // Se não houver dados na próxima página, impede o usuário de avançar mais
+          setPagina(p => p - 1);
+          setErro("Você chegou ao final do histórico.");
+      } else {
+          setConcursos(data);
+      }
+
+    } catch (error) {
+      console.error("Erro ao buscar resultados:", error);
+      setErro("Falha ao carregar os resultados. Verifique sua conexão ou a API.");
+    } finally {
+      setLoading(false);
     }
-    // ... resto do seu código
-  } catch (error) {
-    console.error(error);
-  }
-};
+  };
 
-
+  // ✅ CHAVE 1: UseEffect para gerenciar a paginação e carregamento inicial
   useEffect(() => {
+    // Isso dispara o fetch toda vez que a página muda
     fetchResultados(pagina);
   }, [pagina]);
 
-  // 🔎 filtro por busca
+
+  // 🔎 CHAVE 2: Lógica de Busca e Filtro (sem chamar a API para cada digitação)
+  // Mantemos o filtro apenas no frontend para os concursos já carregados.
   const concursosFiltrados = concursos.filter((c) =>
-    busca ? c.numero.toString().includes(busca) : true
+    busca ? c.numero.toString().includes(busca.trim()) : true
   );
+
+  // Função para lidar com a mudança de página
+  const handlePageChange = (delta: number) => {
+    // Apenas muda a página se não estiver carregando ou se não houver erro
+    if (!loading) {
+        setPagina((p) => Math.max(1, p + delta));
+    }
+  }
+
 
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-6">
@@ -62,7 +87,7 @@ const ResultadosOficiais = () => {
             <Trophy className="text-amber-500" /> Resultados Oficiais
           </h1>
           <p className="text-slate-500">
-            Histórico completo da Lotofácil atualizado
+            Histórico completo da Lotofácil atualizado (Dados de 2025)
           </p>
         </div>
 
@@ -81,15 +106,19 @@ const ResultadosOficiais = () => {
         </div>
       </div>
 
-      {/* Lista de Resultados */}
+      {/* Lista de Resultados e Estados de Carregamento/Erro */}
       <div className="space-y-4">
         {loading ? (
           <div className="text-center py-12 text-slate-400">
             Carregando histórico...
           </div>
+        ) : erro ? (
+            <div className="text-center py-12 text-red-500 border border-red-300 bg-red-50 p-4 rounded-lg">
+                {erro}
+            </div>
         ) : concursosFiltrados.length === 0 ? (
           <div className="text-center py-12 text-slate-400">
-            Nenhum resultado encontrado
+            Nenhum resultado encontrado para o filtro aplicado.
           </div>
         ) : (
           concursosFiltrados.map((conc) => {
@@ -126,12 +155,14 @@ const ResultadosOficiais = () => {
                 <div className="flex flex-wrap gap-2">
                   {dezenasOrdenadas.length > 0 ? (
                     dezenasOrdenadas.map((num) => (
-                      <div
-                        key={num}
-                        className="w-9 h-9 flex items-center justify-center rounded-full bg-slate-800 text-white font-bold text-sm shadow-sm border-2 border-slate-700"
-                      >
-                        {num.toString().padStart(2, "0")}
-                      </div>
+                      // Usando o componente LotteryBall importado
+                      <LotteryBall 
+                        key={num} 
+                        number={num} 
+                        size="md" 
+                        active={true} // Todos os números sorteados são ativos
+                        className="bg-slate-800 text-white border-2 border-slate-700"
+                      />
                     ))
                   ) : (
                     <span className="text-slate-400 text-sm">
@@ -148,8 +179,8 @@ const ResultadosOficiais = () => {
       {/* Paginação */}
       <div className="flex justify-center items-center gap-4 pt-6">
         <button
-          onClick={() => setPagina((p) => Math.max(1, p - 1))}
-          disabled={pagina === 1}
+          onClick={() => handlePageChange(-1)}
+          disabled={pagina === 1 || loading}
           className="p-2 border rounded-lg hover:bg-slate-50 disabled:opacity-30 transition-colors"
         >
           <ChevronLeft />
@@ -160,7 +191,8 @@ const ResultadosOficiais = () => {
         </span>
 
         <button
-          onClick={() => setPagina((p) => p + 1)}
+          onClick={() => handlePageChange(1)}
+          disabled={loading} // Desabilita enquanto busca a próxima página
           className="p-2 border rounded-lg hover:bg-slate-50 transition-colors"
         >
           <ChevronRight />
