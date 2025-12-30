@@ -10,15 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import api from "@/lib/api";
 
 /* =========================
-   Tipagens Corrigidas
+   Tipagens Atualizadas (baseado no backend real)
 ========================= */
-// Resposta real do /palpites/fixo
-interface RespostaPalpiteFixo {
-  numeros: number[];
-  score_medio: number;
-}
-
-// Resposta real do /palpites/estatisticos
 interface PalpiteEstatistico {
   numeros: number[];
   estatistica: {
@@ -36,6 +29,11 @@ interface RespostaPalpitesEstatisticos {
   palpites: PalpiteEstatistico[];
 }
 
+interface RespostaPalpiteFixo {
+  numeros: number[];
+  // score_medio não existe no fixo atualmente
+}
+
 /* ========================= */
 export default function Palpites() {
   const { toast } = useToast();
@@ -45,13 +43,14 @@ export default function Palpites() {
   const {
     data: palpiteFixo,
     isLoading: loadingFixo,
+    error: errorFixo,
     refetch: refetchFixo,
   } = useQuery<RespostaPalpiteFixo>({
     queryKey: ["palpite-fixo", refreshKey],
     queryFn: async () => {
       const response = await api.get("/palpites/fixo");
       console.log("DEBUG - Palpite Fixo:", response.data);
-      return response.data; // Já vem com { numeros, score_medio }
+      return response.data;
     },
     staleTime: 0,
   });
@@ -60,23 +59,23 @@ export default function Palpites() {
   const {
     data: palpitesEstatisticos,
     isLoading: loadingEstatisticos,
+    error: errorEstatisticos,
     refetch: refetchEstatisticos,
   } = useQuery<RespostaPalpitesEstatisticos>({
     queryKey: ["palpites-estatisticos", refreshKey],
     queryFn: async () => {
       const response = await api.get("/palpites/estatisticos");
       console.log("DEBUG - Palpites Estatísticos:", response.data);
-      return response.data; // Já vem com { palpites: [...] }
+      return response.data;
     },
     staleTime: 0,
   });
 
   const handleRefresh = async () => {
     setRefreshKey((prev) => prev + 1);
-    await Promise.all([refetchFixo(), refetchEstatisticos()]);
     toast({
-      title: "Palpites atualizados!",
-      description: "Novos palpites foram gerados com sucesso.",
+      title: "Atualizando palpites...",
+      description: "Aguarde um momento.",
     });
   };
 
@@ -115,6 +114,15 @@ export default function Palpites() {
           </Button>
         </div>
 
+        {/* Erros globais (se houver 404 ou outro) */}
+        {(errorFixo || errorEstatisticos) && (
+          <div className="p-4 border border-destructive rounded-lg bg-destructive/10 text-center">
+            <p className="text-destructive">
+              Erro ao carregar palpites. Verifique sua conexão ou tente novamente.
+            </p>
+          </div>
+        )}
+
         {/* SEÇÃO: Palpite Fixo */}
         <section>
           <div className="flex items-center gap-2 mb-4">
@@ -125,10 +133,10 @@ export default function Palpites() {
 
           {loadingFixo ? (
             <LoadingCard />
-          ) : palpiteFixo && palpiteFixo.numeros && palpiteFixo.numeros.length > 0 ? (
+          ) : palpiteFixo && palpiteFixo.numeros?.length === 15 ? (
             <PalpiteCard
               numeros={palpiteFixo.numeros}
-              scoreMedio={palpiteFixo.score_medio}
+              scoreMedio={undefined}  // Ou 0 se preferir esconder o score no componente
               highlight
               showSaveButton
               onSave={handleSave}
@@ -136,7 +144,7 @@ export default function Palpites() {
           ) : (
             <div className="p-6 border rounded-lg bg-muted/20 text-center">
               <p className="text-muted-foreground text-sm">
-                Não foi possível carregar o palpite fixo. Tente atualizar.
+                Não foi possível carregar o palpite fixo no momento. Tente atualizar.
               </p>
             </div>
           )}
@@ -152,7 +160,7 @@ export default function Palpites() {
           </div>
 
           {loadingEstatisticos ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {Array.from({ length: 7 }).map((_, i) => (
                 <LoadingCard key={i} />
               ))}
@@ -163,9 +171,9 @@ export default function Palpites() {
                 <PalpiteCard
                   key={`palpite-${index}`}
                   index={index + 1}
-                  numeros={palpite.numeros}
+                  numeros={palpite.numeros || []}
                   scoreMedio={palpite.score_medio}
-                  metricas={palpite.estatistica.metricas}
+                  metricas={palpite.estatistica?.metricas}
                   showSaveButton
                   onSave={handleSave}
                 />
@@ -174,7 +182,7 @@ export default function Palpites() {
           ) : (
             <div className="p-6 border rounded-lg bg-muted/20 text-center">
               <p className="text-muted-foreground text-sm">
-                Nenhum palpite estatístico disponível no momento. Tente atualizar.
+                Nenhum palpite estatístico disponível. Tente atualizar.
               </p>
             </div>
           )}
