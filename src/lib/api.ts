@@ -1,8 +1,11 @@
 import axios from "axios";
 
+/**
+ * Base do backend (SEM /api)
+ */
 const API_URL =
   import.meta.env.VITE_API_URL ||
-  "https://palpiteiro-ia-backend-docker.onrender.com";
+  "https://palpiteiro-backend.vercel.app";
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -12,11 +15,18 @@ export const api = axios.create({
   },
 });
 
-// Log simples para debug em produção
+/**
+ * Interceptor para debug (Netlify / produção)
+ */
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error("Erro API:", error?.response || error);
+    console.error("❌ Erro API:", {
+      method: error?.config?.method,
+      url: error?.config?.url,
+      status: error?.response?.status,
+      data: error?.response?.data,
+    });
     return Promise.reject(error);
   }
 );
