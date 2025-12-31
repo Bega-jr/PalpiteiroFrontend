@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const API_URL = import.meta.env.VITE_API_URL || "https://palpiteiro-backend.vercel.app";
+// Importante: garante que a URL termine sem barra duplicada
+const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, "") || "https://palpiteiro-backend.vercel.app";
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -13,13 +14,22 @@ export const api = axios.create({
 // GET PALPITE FIXO
 export const getPalpiteFixo = async () => {
   const resp = await api.get("/palpites/fixo");
+  console.log("DEBUG Palpite Fixo:", resp.data);
   return resp.data;
 };
 
 // GET PALPITES ESTATÍSTICOS
 export const getPalpitesEstatisticos = async () => {
   const resp = await api.get("/palpites/estatisticos");
+  console.log("DEBUG Palpites Estatísticos:", resp.data);
   return resp.data;
+};
+
+// GET ÚLTIMO CONCURSO
+export const getUltimoConcurso = async () => {
+  const resp = await api.get("/concurso/ultimo");
+  console.log("DEBUG Último Concurso:", resp.data);
+  return resp.data.concurso; // Retorna o objeto interno
 };
 
 // GET HISTÓRICO DE PALPITES
@@ -40,9 +50,4 @@ export const postSalvarPalpite = async (numeros: number[]) => {
   return resp.data;
 };
 
-export default {
-  getPalpiteFixo,
-  getPalpitesEstatisticos,
-  getHistorico,
-  postSalvarPalpite,
-};
+export default api;
