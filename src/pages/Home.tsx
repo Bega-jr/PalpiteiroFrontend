@@ -77,14 +77,35 @@ const quickLinks = [
 ];
 
 export default function Home() {
- const { data: ultimoConcurso, isLoading } = useQuery({
-  queryKey: ["ultimoConcurso"],
-  queryFn: async () => {
-    const response = await api.get("/concurso/ultimo");
-    console.log("DEBUG Último Concurso:", response.data);
-    return response.data.concurso;  // Retorna só o objeto concurso
-  },
-});
+  const { data: ultimoConcurso, isLoading } = useQuery({
+    queryKey: ["ultimoConcurso"],
+    queryFn: async () => {
+      const response = await api.get("/concurso/ultimo");
+      console.log("DEBUG Último Concurso:", response.data);
+      return response.data.concurso; // Retorna o objeto interno "concurso"
+    },
+  });
+
+  // Monta o array de dezenas manualmente a partir das bolas
+  const dezenasArray = ultimoConcurso
+    ? [
+        Number(ultimoConcurso.bola1),
+        Number(ultimoConcurso.bola2),
+        Number(ultimoConcurso.bola3),
+        Number(ultimoConcurso.bola4),
+        Number(ultimoConcurso.bola5),
+        Number(ultimoConcurso.bola6),
+        Number(ultimoConcurso.bola7),
+        Number(ultimoConcurso.bola8),
+        Number(ultimoConcurso.bola9),
+        Number(ultimoConcurso.bola10),
+        Number(ultimoConcurso.bola11),
+        Number(ultimoConcurso.bola12),
+        Number(ultimoConcurso.bola13),
+        Number(ultimoConcurso.bola14),
+        Number(ultimoConcurso.bola15),
+      ].sort((a, b) => a - b)
+    : [];
 
   return (
     <Layout>
@@ -144,13 +165,14 @@ export default function Home() {
               </Link>
             </Button>
           </div>
+
           {isLoading ? (
             <LoadingCard />
           ) : ultimoConcurso ? (
             <ConcursoCard
               concurso={ultimoConcurso.concurso}
               data={ultimoConcurso.data}
-              dezenas={ultimoConcurso.dezenas}
+              dezenas={dezenasArray}
             />
           ) : (
             <Card>
