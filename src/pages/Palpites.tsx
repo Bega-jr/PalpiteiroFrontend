@@ -34,7 +34,8 @@ export default function Palpites() {
     queryFn: () => api.getPalpitesEstatisticos(),
   });
 
-  // Extração segura dos números do Palpite Fixo (Ajustado para funcionar com 'numeros' ou 'palpite')
+  // EXTRAÇÃO SEGURA UNIFICADA
+  // Tenta ler 'numeros' (como no api.tsx) ou 'palpite' (como fallback do arquivo 1)
   const numerosFixo = palpiteFixoData?.numeros || palpiteFixoData?.palpite || [];
   const scoreFixo = palpiteFixoData?.score_medio || 0;
 
@@ -109,7 +110,7 @@ export default function Palpites() {
           )}
         </section>
 
-        {/* Filtros Aplicados (Visual Melhorado) */}
+        {/* Filtros Aplicados (Visual Melhorado e usando chaves do seu backend) */}
         {palpitesEstatisticos?.filtros_aplicados && (
           <Card className="border-none shadow-sm bg-muted/10">
             <CardHeader className="pb-3">
@@ -120,28 +121,13 @@ export default function Palpites() {
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                <Badge variant="outline" className="bg-white">
-                  Soma: {palpitesEstatisticos.filtros_aplicados.soma_range[0]}-
-                  {palpitesEstatisticos.filtros_aplicados.soma_range[1]}
-                </Badge>
-                <Badge variant="outline" className="bg-white">
-                  Pares: {palpitesEstatisticos.filtros_aplicados.pares_range[0]}-
-                  {palpitesEstatisticos.filtros_aplicados.pares_range[1]}
-                </Badge>
-                <Badge variant="outline" className="bg-white">
-                  Primos: {palpitesEstatisticos.filtros_aplicados.primos_range[0]}-
-                  {palpitesEstatisticos.filtros_aplicados.primos_range[1]}
-                </Badge>
-                <Badge variant="outline" className="bg-white">
-                  Moldura: {palpitesEstatisticos.filtros_aplicados.moldura_range[0]}-
-                  {palpitesEstatisticos.filtros_aplicados.moldura_range[1]}
-                </Badge>
-                <Badge variant="outline" className="bg-white">
-                  Repetidos: {palpitesEstatisticos.filtros_aplicados.max_repetidos}
-                </Badge>
-                <Badge variant="outline" className="bg-white">
-                  Seq. Máx: {palpitesEstatisticos.filtros_aplicados.max_sequencia}
-                </Badge>
+                {/* Usando as chaves exatas do seu backend 'estatistica.tsx' */}
+                <Badge variant="outline" className="bg-white">Soma: {palpitesEstatisticos.filtros_aplicados.soma_range[0]}-{palpitesEstatisticos.filtros_aplicados.soma_range[1]}</Badge>
+                <Badge variant="outline" className="bg-white">Pares: {palpitesEstatisticos.filtros_aplicados.pares_range[0]}-{palpitesEstatisticos.filtros_aplicados.pares_range[1]}</Badge>
+                <Badge variant="outline" className="bg-white">Primos: {palpitesEstatisticos.filtros_aplicados.primos_range[0]}-{palpitesEstatisticos.filtros_aplicados.primos_range[1]}</Badge>
+                <Badge variant="outline" className="bg-white">Moldura: {palpitesEstatisticos.filtros_aplicados.moldura_range[0]}-{palpitesEstatisticos.filtros_aplicados.moldura_range[1]}</Badge>
+                <Badge variant="outline" className="bg-white">Repetidos: {palpitesEstatisticos.filtros_aplicados.max_repetidos}</Badge>
+                <Badge variant="outline" className="bg-white">Seq. Máx: {palpitesEstatisticos.filtros_aplicados.max_sequencia}</Badge>
                 <Badge className="bg-primary/10 text-primary border-primary/20">
                   Score Mín: {palpitesEstatisticos.filtros_aplicados.score_minimo}
                 </Badge>
@@ -160,7 +146,8 @@ export default function Palpites() {
           </div>
           {loadingEstatisticos ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {Array.from({ length: 6 }).map((_, i) => <LoadingCard key={i} />)}
+              {/* Mantém o visual de carregamento de 7 cards, como na sua imagem */}
+              {Array.from({ length: 7 }).map((_, i) => <LoadingCard key={i} />)}
             </div>
           ) : palpitesEstatisticos?.palpites ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
