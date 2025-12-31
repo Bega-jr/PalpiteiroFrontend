@@ -8,18 +8,40 @@ const API_URL = (
 export const api = axios.create({
   baseURL: API_URL,
   timeout: 15000,
-  headers: {
-    "Content-Type": "application/json",
-  },
+  headers: { "Content-Type": "application/json" },
 });
 
+/* =====================
+   ESTATÍSTICAS
+===================== */
+export const getEstatisticasScore = async () => {
+  const resp = await api.get("/estatisticas/base");
+  return resp.data;
+};
+
+/* =====================
+   PALPITES
+===================== */
+// Função que estava faltando e causou o erro de build
+export const getPalpiteFixo = async () => {
+  const resp = await api.get("/palpites/fixo");
+  return resp.data;
+};
+
+export const getPalpitesEstatisticos = async () => {
+  const resp = await api.get("/palpites/estatisticos");
+  return resp.data;
+};
+
+/* =====================
+   CONCURSO / HISTÓRICO
+===================== */
 export const getUltimoConcurso = async () => {
   const CACHE_KEY = "palpiteiro_concurso_cache";
   const TIMESTAMP_KEY = "palpiteiro_cache_time";
   const TRINTA_MINUTOS = 30 * 60 * 1000;
 
   try {
-    // 1. Tenta recuperar do Cache Local primeiro
     const cached = localStorage.getItem(CACHE_KEY);
     const lastFetch = localStorage.getItem(TIMESTAMP_KEY);
     const agora = Date.now();
@@ -29,19 +51,17 @@ export const getUltimoConcurso = async () => {
       return JSON.parse(cached);
     }
 
-    // 2. Busca na API se não houver cache ou se expirou
     const resp = await api.get("/ultimos/1");
     let data = null;
 
     if (resp.data && resp.data.concursos && Array.isArray(resp.data.concursos)) {
-      data = resp.data.concursos[0];
+      data = resp.data.concursos[0]; // Pega o primeiro objeto da lista
     } else if (Array.isArray(resp.data)) {
       data = resp.data[0];
     } else {
       data = resp.data;
     }
 
-    // 3. Salva no cache para a próxima vez
     if (data) {
       localStorage.setItem(CACHE_KEY, JSON.stringify(data));
       localStorage.setItem(TIMESTAMP_KEY, agora.toString());
@@ -54,16 +74,6 @@ export const getUltimoConcurso = async () => {
     if (fallback) return JSON.parse(fallback);
     throw error;
   }
-};
-
-export const getEstatisticasScore = async () => {
-  const resp = await api.get("/estatisticas/base");
-  return resp.data;
-};
-
-export const getPalpitesEstatisticos = async () => {
-  const resp = await api.get("/palpites/estatisticos");
-  return resp.data;
 };
 
 export const getHistorico = async () => {
@@ -81,3 +91,4 @@ export const postSalvarPalpite = async (numeros: number[]) => {
   });
   return resp.data;
 };
+
