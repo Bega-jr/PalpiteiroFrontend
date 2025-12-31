@@ -6,32 +6,36 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
 
 export default function Resultados() {
+  const { toast } = useToast();
   const [buscaNumero, setBuscaNumero] = useState("");
   const [concursoBuscado, setConcursoBuscado] = useState<number | null>(null);
 
-  // Últimos 10 concursos (fixo, como você pediu)
-  const { data: ultimosConcursos = [], isLoading: loadingUltimos } = useQuery({
+  // Últimos 10 concursos
+  const { data: ultimosData = {}, isLoading: loadingUltimos } = useQuery({
     queryKey: ["ultimos-concursos"],
     queryFn: async () => {
-      const resp = await api.get("/ultimos/10");  // Fixo em 10 — mude se quiser
-      return resp.data;  // Array de concursos
+      const resp = await api.get("/ultimos/10");
+      return resp.data; // {status, quantidade, concursos: [...]}
     },
-    staleTime: 1000 * 60 * 30,  // Cache de 30 min
+    staleTime: 1000 * 60 * 30, // 30 minutos de cache
     refetchOnWindowFocus: false,
   });
+
+  const ultimosConcursos = ultimosData.concursos || [];
 
   // Concurso específico pela busca
   const { data: concursoEspecifico, isLoading: loadingEspecifico } = useQuery({
     queryKey: ["concurso-especifico", concursoBuscado],
     queryFn: async () => {
       const resp = await api.get(`/concurso/${concursoBuscado}`);
-      return resp.data.concurso;  // Objeto único do concurso
+      return resp.data.concurso;
     },
-    enabled: !!concursoBuscado,  // Só chama se houver número
-    staleTime: 1000 * 60 * 60,  // Cache de 1 hora
+    enabled: !!concursoBuscado,
+    staleTime: 1000 * 60 * 60, // 1 hora de cache
   });
 
   const handleBusca = () => {
@@ -47,10 +51,15 @@ export default function Resultados() {
     }
   };
 
-  // Decide o que exibir: concurso buscado ou lista de últimos
+  const handleLimparBusca = () => {
+    setConcursoBuscado(null);
+    setBuscaNumero("");
+  };
+
+  // Decide o que exibir
   const concursosExibidos = concursoEspecifico ? [concursoEspecifico] : ultimosConcursos;
 
-  // Função para montar array de dezenas (o backend usa bola1 a bola15)
+  // Monta o array de dezenas a partir de bola1 até bola15
   const montarDezenas = (concurso: any) => [
     Number(concurso.bola1),
     Number(concurso.bola2),
@@ -83,24 +92,16 @@ export default function Resultados() {
             onChange={(e) => setBuscaNumero(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleBusca()}
           />
-          <Button onClick={handleBusca}>
-            Buscar Concurso
-          </Button>
+          <Button onClick={handleBusca}>Buscar Concurso</Button>
           {concursoBuscado && (
-            <Button
-              variant="outline"
-              onClick={() => {
-                setConcursoBuscado(null);
-                setBuscaNumero("");
-              }}
-            >
+            <Button variant="outline" onClick={handleLimparBusca}>
               Ver últimos 10
             </Button>
           )}
         </div>
 
         {/* Loading ou lista */}
-        {(loadingUltimos || loadingEspecifico) ? (
+        {loadingUltimos || loadingEspecifico ? (
           <div className="grid gap-8">
             {Array.from({ length: 5 }).map((_, i) => (
               <LoadingCard key={i} />
@@ -121,7 +122,7 @@ export default function Resultados() {
           <Card>
             <CardContent className="p-10 text-center">
               <p className="text-muted-foreground text-lg">
-                Nenhum concurso encontrado para o número informado.
+                Nenhum concurso encontrado.
               </p>
             </CardContent>
           </Card>
