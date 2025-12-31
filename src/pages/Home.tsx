@@ -18,7 +18,8 @@ import {
   Shield,
 } from "lucide-react";
 
-const FEATURES = [
+// DEFINIÇÃO DAS FEATURES (Necessário para evitar o erro de ReferenceError)
+const features = [
   {
     icon: Sparkles,
     title: "Palpites Inteligentes",
@@ -41,7 +42,8 @@ const FEATURES = [
   },
 ];
 
-const QUICK_LINKS = [
+// DEFINIÇÃO DOS QUICKLINKS (Necessário para evitar o erro de ReferenceError)
+const quickLinks = [
   {
     href: "/palpites",
     icon: Clover,
@@ -72,19 +74,16 @@ const QUICK_LINKS = [
   },
 ];
 
-// ... (mantenha todos os seus imports e as constantes features/quickLinks exatamente como estão)
-
 export default function Home() {
   const { data: ultimoConcurso, isLoading } = useQuery({
     queryKey: ["ultimoConcurso"],
     queryFn: () => api.getUltimoConcurso(),
-    // Adicione staleTime para evitar que a tela pisque buscando dados o tempo todo
-    staleTime: 1000 * 60 * 5, 
+    staleTime: 1000 * 60 * 5,
   });
 
   return (
     <Layout>
-      {/* Hero Section - Sem alterações */}
+      {/* Hero Section */}
       <section className="gradient-hero text-primary-foreground py-20 md:py-32">
         <div className="container">
           <div className="max-w-3xl mx-auto text-center space-y-6">
@@ -93,8 +92,7 @@ export default function Home() {
               Palpites baseados em estatísticas reais 2025
             </div>
             <h1 className="font-display text-4xl md:text-6xl font-bold leading-tight">
-              Aumente suas chances na{" "}
-              <span className="text-primary">Lotofácil</span>
+              Aumente suas chances na <span className="text-primary">Lotofácil</span>
             </h1>
             <p className="text-lg md:text-xl text-white/80 max-w-2xl mx-auto">
               Algoritmo inteligente que analisa milhares de sorteios para gerar
@@ -102,25 +100,14 @@ export default function Home() {
               e acompanhamento de resultados.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-              <Button
-                asChild
-                size="lg"
-                className="gradient-accent text-primary-foreground shadow-glow"
-              >
+              <Button asChild size="lg" className="gradient-accent text-primary-foreground shadow-glow">
                 <Link to="/palpites">
-                  <Clover className="mr-2 h-5 w-5" />
-                  Gerar Palpites Agora
+                  <Clover className="mr-2 h-5 w-5" /> Gerar Palpites Agora
                 </Link>
               </Button>
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-              >
+              <Button asChild size="lg" variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20">
                 <Link to="/estatisticas">
-                  <BarChart3 className="mr-2 h-5 w-5" />
-                  Ver Estatísticas
+                  <BarChart3 className="mr-2 h-5 w-5" /> Ver Estatísticas
                 </Link>
               </Button>
             </div>
@@ -128,15 +115,14 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Último Resultado - CORREÇÃO DA LÓGICA AQUI */}
+      {/* Último Resultado - Lógica de mapeamento flexível */}
       <section className="py-12 md:py-16">
         <div className="container">
           <div className="flex items-center justify-between mb-6">
             <h2 className="font-display text-2xl font-bold">Último Resultado</h2>
             <Button asChild variant="ghost">
               <Link to="/resultados">
-                Ver todos
-                <ArrowRight className="ml-2 h-4 w-4" />
+                Ver todos <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
           </div>
@@ -144,7 +130,6 @@ export default function Home() {
             <LoadingCard />
           ) : ultimoConcurso ? (
             <ConcursoCard
-              // Aqui está a correção: mapeamos os possíveis nomes vindo da API
               concurso={ultimoConcurso.concurso || ultimoConcurso.numero}
               data={ultimoConcurso.data || ultimoConcurso.data_concurso || ultimoConcurso.dataApuracao}
               dezenas={ultimoConcurso.dezenas || ultimoConcurso.listaDezenas || []}
@@ -159,7 +144,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Quick Links - Sem alterações */}
+      {/* Quick Links Section */}
       <section className="py-12 md:py-16 bg-muted/50">
         <div className="container">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -171,12 +156,12 @@ export default function Home() {
                   to={link.href}
                   className="group block p-6 bg-card rounded-xl border hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
                 >
-                  <div
-                    className={`w-12 h-12 ${link.color} rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}
-                  >
+                  <div className={`w-12 h-12 ${link.color} rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-sm`}>
                     <Icon className="h-6 w-6 text-white" />
                   </div>
-                  <h3 className="font-display font-semibold mb-1">{link.title}</h3>
+                  <h3 className="font-display font-semibold mb-1 group-hover:text-primary transition-colors">
+                    {link.title}
+                  </h3>
                   <p className="text-sm text-muted-foreground">
                     {link.description}
                   </p>
@@ -187,16 +172,13 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Features - Sem alterações */}
+      {/* Features Section */}
       <section className="py-12 md:py-20">
         <div className="container">
           <div className="text-center mb-12">
-            <h2 className="font-display text-3xl font-bold mb-4">
-              Por que usar o Palpiteiro?
-            </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              Combinamos análise estatística avançada com uma interface simples
-              e intuitiva para otimizar suas apostas.
+            <h2 className="font-display text-3xl font-bold mb-4">Por que usar o Palpiteiro?</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+              Combinamos análise estatística avançada com uma interface intuitiva para otimizar suas apostas.
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -205,7 +187,7 @@ export default function Home() {
               return (
                 <Card
                   key={i}
-                  className="p-6 hover:shadow-lg transition-shadow animate-slide-up opacity-0"
+                  className="p-6 hover:shadow-md transition-shadow animate-slide-up opacity-0"
                   style={{ animationDelay: `${i * 0.1}s`, animationFillMode: "forwards" }}
                 >
                   <div className="flex gap-4">
@@ -213,12 +195,8 @@ export default function Home() {
                       <Icon className="h-6 w-6 text-primary" />
                     </div>
                     <div>
-                      <h3 className="font-display font-semibold mb-2">
-                        {feature.title}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {feature.description}
-                      </p>
+                      <h3 className="font-display font-semibold mb-2">{feature.title}</h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed">{feature.description}</p>
                     </div>
                   </div>
                 </Card>
@@ -228,17 +206,15 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CTA - Sem alterações */}
+      {/* CTA Section */}
       <section className="py-12 md:py-20 bg-secondary text-secondary-foreground">
-        <div className="container text-center">
-          <h2 className="font-display text-3xl font-bold mb-4">
-            Pronto para começar?
-          </h2>
-          <p className="text-secondary-foreground/80 max-w-xl mx-auto mb-8">
-             Gere seus palpites e acompanhe os resultados agora mesmo.
+        <div className="container text-center space-y-6">
+          <h2 className="font-display text-3xl font-bold">Pronto para começar?</h2>
+          <p className="text-secondary-foreground/80 max-w-xl mx-auto">
+            Gere seus palpites e acompanhe os resultados agora mesmo através da nossa inteligência estatística.
           </p>
-          <Button asChild size="lg" className="gradient-accent text-primary-foreground">
-             <Link to="/palpites">Gerar Palpites</Link>
+          <Button asChild size="lg" className="gradient-accent text-primary-foreground px-8 shadow-glow">
+            <Link to="/palpites">Gerar Palpites</Link>
           </Button>
         </div>
       </section>
