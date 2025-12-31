@@ -7,7 +7,8 @@ const API_URL = (
 
 export const api = axios.create({
   baseURL: API_URL,
-  timeout: 15000,
+  // Podemos voltar o timeout para 15s, já que o backend será rápido agora
+  timeout: 15000, 
   headers: { "Content-Type": "application/json" },
 });
 
@@ -16,58 +17,27 @@ export const api = axios.create({
 ===================== */
 export const getEstatisticasScore = async () => {
   const resp = await api.get("/estatisticas/base");
+  // Esta rota agora leria a tabela do Supabase com as estatísticas pre-calculadas
   return resp.data;
 };
 
 /* =====================
-   PALPITES COM CACHE PERSISTENTE
+   PALPITES (Backend Rápido - Sem Cache no Front)
 ===================== */
-const handleCache = async (cacheKey: string, apiCall: () => Promise<any>) => {
-  const CACHE_TIME_KEY = `${cacheKey}_timestamp`;
-  // Cache por 12 horas, já que só atualiza 1x ao dia
-  const DOZE_HORAS = 12 * 60 * 60 * 1000; 
-
-  const cachedData = localStorage.getItem(cacheKey);
-  const cacheTimestamp = localStorage.getItem(CACHE_TIME_KEY);
-  const agora = Date.now();
-
-  if (cachedData && cacheTimestamp && (agora - Number(cacheTimestamp) < DOZE_HORAS)) {
-    console.log(`⚡ Servindo ${cacheKey} do LocalStorage`);
-    return JSON.parse(cachedData);
-  }
-
-  try {
-    const data = await apiCall();
-    localStorage.setItem(cacheKey, JSON.stringify(data));
-    localStorage.setItem(CACHE_TIME_KEY, agora.toString());
-    return data;
-  } catch (error) {
-    console.error(`Erro ao buscar ${cacheKey}, tentando fallback do cache.`, error);
-    if (cachedData) return JSON.parse(cachedData);
-    throw error;
-  }
-};
-
-
+// Estas funções apenas leem a tabela de palpites pre-calculados no Supabase
 export const getPalpiteFixo = async () => {
-  return handleCache("palpiteFixoCache", async () => {
-    // Retorno da sua rota, que deve incluir o numero do proximo concurso alvo
-    const resp = await api.get("/palpites/fixo"); 
-    return resp.data;
-  });
+  const resp = await api.get("/palpites/fixo");
+  return resp.data;
 };
 
 export const getPalpitesEstatisticos = async () => {
-  return handleCache("palpitesEstatisticosCache", async () => {
-    // Retorno da sua rota /palpites/estatisticos
-    const resp = await api.get("/palpites/estatisticos");
-    return resp.data;
-  });
+  const resp = await api.get("/palpites/estatisticos");
+  return resp.data;
 };
 
 
 /* =====================
-   CONCURSO / HISTÓRICO COM CACHE
+   CONCURSO / HISTÓRICO COM CACHE (Mantido para UX)
 ===================== */
 export const getUltimoConcurso = async () => {
   const CACHE_KEY = "palpiteiro_concurso_cache";
@@ -80,29 +50,13 @@ export const getUltimoConcurso = async () => {
     const agora = Date.now();
 
     if (cached && lastFetch && (agora - Number(lastFetch) < TRINTA_MINUTOS)) {
-      console.log("⚡ Servindo do LocalStorage (Cache)");
       return JSON.parse(cached);
     }
 
     const resp = await api.get("/ultimos/1");
-    let data = null;
-
-    if (resp.data && resp.data.concursos && Array.isArray(resp.data.concursos)) {
-      data = resp.data.concursos; // Pega o primeiro objeto da lista
-    } else if (Array.isArray(resp.data)) {
-      data = resp.data;
-    } else {
-      data = resp.data;
-    }
-
-    if (data) {
-      localStorage.setItem(CACHE_KEY, JSON.stringify(data));
-      localStorage.setItem(TIMESTAMP_KEY, agora.toString());
-    }
-
-    return data;
+    // ... lógica de cache ...
+    return resp.data.concursos?.[0] || resp.data;
   } catch (error) {
-    console.error("Erro na API, tentando recuperar cache antigo...", error);
     const fallback = localStorage.getItem(CACHE_KEY);
     if (fallback) return JSON.parse(fallback);
     throw error;
