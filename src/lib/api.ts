@@ -38,7 +38,7 @@ export const getPalpitesEstatisticos = async () => {
    CONCURSO / HISTÓRICO
 ===================== */
 export const getUltimoConcurso = async () => {
-  const resp = await api.get("/concurso/ultimo/1");
+  const resp = await api.get("/concurso/ultimos/1");
   return resp.data.concurso;
 };
 
