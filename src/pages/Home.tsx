@@ -80,9 +80,9 @@ export default function Home() {
   const { data: ultimoConcurso, isLoading } = useQuery({
   queryKey: ["ultimoConcurso"],
   queryFn: async () => {
-    const response = await api.get("/ultimos/1");
-    console.log("DEBUG Ultimo:", response.data);
-    return response.data[0];  // Pega o primeiro (mais recente)
+    const response = await api.get("/concurso/ultimo");
+    console.log("DEBUG Último Concurso:", response.data);
+    return response.data;  // Retorna objeto direto: { concurso, data, dezenas: [...] }
   },
 });
 
