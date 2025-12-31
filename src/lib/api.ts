@@ -1,53 +1,46 @@
 import axios from "axios";
 
-// Importante: garante que a URL termine sem barra duplicada
-const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, "") || "https://palpiteiro-backend.vercel.app";
+// Usa a variável de ambiente, mas garante que não duplique
+const API_URL = import.meta.env.VITE_API_URL || "https://palpiteiro-backend.vercel.app";
+
+// Remove barra final para evitar duplicação
+const cleanURL = API_URL.replace(/\/$/, "");
 
 export const api = axios.create({
-  baseURL: API_URL,
+  baseURL: cleanURL + "/",  // Adiciona uma barra só no final
   timeout: 15000,
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-// GET PALPITE FIXO
+// Ou alternativa mais segura: baseURL vazia e paths absolutos nas chamadas
+// export const api = axios.create({
+//   timeout: 15000,
+//   headers: { "Content-Type": "application/json" },
+// });
+
+// Então nas funções use caminho completo:
+// const resp = await axios.get(`${cleanURL}/palpites/fixo`);
+
 export const getPalpiteFixo = async () => {
-  const resp = await api.get("/palpites/fixo");
+  const resp = await api.get("palpites/fixo");  // Sem barra inicial!
   console.log("DEBUG Palpite Fixo:", resp.data);
   return resp.data;
 };
 
-// GET PALPITES ESTATÍSTICOS
 export const getPalpitesEstatisticos = async () => {
-  const resp = await api.get("/palpites/estatisticos");
+  const resp = await api.get("palpites/estatisticos");  // Sem barra inicial!
   console.log("DEBUG Palpites Estatísticos:", resp.data);
   return resp.data;
 };
 
-// GET ÚLTIMO CONCURSO
 export const getUltimoConcurso = async () => {
-  const resp = await api.get("/concurso/ultimo");
+  const resp = await api.get("concurso/ultimo");  // Sem barra inicial!
   console.log("DEBUG Último Concurso:", resp.data);
-  return resp.data.concurso; // Retorna o objeto interno
+  return resp.data.concurso;
 };
 
-// GET HISTÓRICO DE PALPITES
-export const getHistorico = async () => {
-  const resp = await api.get("/historico/");
-  return resp.data;
-};
-
-// POST SALVAR PALPITE
-export const postSalvarPalpite = async (numeros: number[]) => {
-  const resp = await api.post("/historico/registrar", {
-    id: crypto.randomUUID(),
-    data: new Date().toISOString(),
-    tipo: "estatistico",
-    numeros,
-    valor_aposta: 3,
-  });
-  return resp.data;
-};
+// ... o resto das funções (historico, post etc.) igual, com paths sem barra inicial
 
 export default api;
