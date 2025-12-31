@@ -21,7 +21,7 @@ const GeraPalpites = () => {
   setLoading(true);
   try {
     const response = await fetch(
-      `${import.meta.env.VITE_API_URL}/palpites/estatistico`
+      `${import.meta.env.VITE_API_URL}/palpites/estatisticos`
     );
     const data = await response.json();
 
