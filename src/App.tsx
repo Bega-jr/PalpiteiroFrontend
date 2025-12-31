@@ -11,7 +11,15 @@ import Historico from "./pages/Historico";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+// Configuração de Retry para ajudar com instabilidades de rede
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1, 
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
