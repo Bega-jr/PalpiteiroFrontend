@@ -1,37 +1,44 @@
 import axios from "axios";
 
-const API_URL = (import.meta.env.VITE_API_URL || "https://palpiteiro-backend.vercel.app").replace(/\/$/, "");
+const API_URL = (
+  import.meta.env.VITE_API_URL ||
+  "https://palpiteiro-backend.vercel.app"
+).replace(/\/$/, "");
 
 export const api = axios.create({
-  baseURL: API_URL + "/",
+  baseURL: API_URL,
   timeout: 15000,
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-// Adicionada a função que estava faltando
+/* =====================
+   ESTATÍSTICAS
+===================== */
 export const getEstatisticasScore = async () => {
   const resp = await api.get("/estatisticas/base");
-  console.log("DEBUG Estatísticas:", resp.data);
   return resp.data;
 };
 
+/* =====================
+   PALPITES
+===================== */
 export const getPalpiteFixo = async () => {
   const resp = await api.get("/palpites/fixo");
-  console.log("DEBUG Palpite Fixo:", resp.data);
   return resp.data;
 };
 
 export const getPalpitesEstatisticos = async () => {
   const resp = await api.get("/palpites/estatisticos");
-  console.log("DEBUG Palpites Estatísticos:", resp.data);
   return resp.data;
 };
 
+/* =====================
+   CONCURSO / HISTÓRICO
+===================== */
 export const getUltimoConcurso = async () => {
   const resp = await api.get("/concurso/ultimo");
-  console.log("DEBUG Último Concurso:", resp.data);
   return resp.data.concurso;
 };
 
@@ -50,6 +57,3 @@ export const postSalvarPalpite = async (numeros: number[]) => {
   });
   return resp.data;
 };
-
-export default api;
-
