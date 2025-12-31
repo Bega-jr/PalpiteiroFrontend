@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Clover, RefreshCw, Star, Info } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { getPalpiteFixo, getPalpitesEstatisticos } from "@/lib/api";  // Use as funções do api.ts
+import { getPalpiteFixo, getPalpitesEstatisticos } from "@/lib/api";
 
 export default function Palpites() {
   const { toast } = useToast();
@@ -17,23 +17,25 @@ export default function Palpites() {
   const {
     data: palpiteFixoData,
     isLoading: loadingFixo,
+    error: errorFixo,
   } = useQuery({
     queryKey: ["palpite-fixo", refreshKey],
     queryFn: getPalpiteFixo,
   });
 
-  const palpiteFixoNumeros = palpiteFixoData?.numeros || [];
+  const numerosFixo = palpiteFixoData?.numeros || [];
 
   // Palpites Estatísticos
   const {
-    data: palpitesEstatisticosData,
+    data: palpitesData,
     isLoading: loadingEstatisticos,
+    error: errorEstatisticos,
   } = useQuery({
     queryKey: ["palpites-estatisticos", refreshKey],
     queryFn: getPalpitesEstatisticos,
   });
 
-  const palpitesEstatisticos = palpitesEstatisticosData?.palpites || [];
+  const palpites = palpitesData?.palpites || [];
 
   const handleRefresh = () => {
     setRefreshKey((prev) => prev + 1);
@@ -57,7 +59,7 @@ export default function Palpites() {
         <div className="container max-w-2xl">
           <h1 className="text-3xl font-bold mb-4">Palpites Estatísticos</h1>
           <p className="text-white/80">
-            Palpites gerados por algoritmo estatístico da Lotofácil (dados atualizados).
+            Palpites gerados por algoritmo estatístico da Lotofácil. Dados atualizados para o concurso de hoje.
           </p>
         </div>
       </section>
@@ -84,10 +86,10 @@ export default function Palpites() {
 
           {loadingFixo ? (
             <LoadingCard />
-          ) : palpiteFixoNumeros.length === 15 ? (
+          ) : numerosFixo.length === 15 ? (
             <PalpiteCard
-              numeros={palpiteFixoNumeros}
-              scoreMedio={undefined}  // Fixo não tem score
+              numeros={numerosFixo}
+              scoreMedio={undefined}
               highlight
               showSaveButton
               onSave={handleSave}
@@ -110,13 +112,19 @@ export default function Palpites() {
 
           {loadingEstatisticos ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {Array.from({ length: 5 }).map((_, i) => (
+              {Array.from({ length: 6 }).map((_, i) => (
                 <LoadingCard key={i} />
               ))}
             </div>
-          ) : palpitesEstatisticos.length > 0 ? (
+          ) : errorEstatisticos ? (
+            <div className="p-6 border rounded-lg bg-destructive/10 text-center">
+              <p className="text-destructive">
+                Erro ao carregar palpites estatísticos. Tente atualizar.
+              </p>
+            </div>
+          ) : palpites.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {palpitesEstatisticos.map((palpite: any, index: number) => (
+              {palpites.map((palpite: any, index: number) => (
                 <PalpiteCard
                   key={index}
                   index={index + 1}
