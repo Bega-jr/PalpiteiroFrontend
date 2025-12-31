@@ -14,21 +14,44 @@ export const api = axios.create({
 });
 
 export const getUltimoConcurso = async () => {
+  const CACHE_KEY = "palpiteiro_concurso_cache";
+  const TIMESTAMP_KEY = "palpiteiro_cache_time";
+  const TRINTA_MINUTOS = 30 * 60 * 1000;
+
   try {
-    const resp = await api.get("/ultimos/1");
-    console.log("DEBUG API (Dados Recebidos):", resp.data);
-    
-    // Acessa a lista 'concursos' conforme seu backend FastAPI
-    if (resp.data && resp.data.concursos && Array.isArray(resp.data.concursos)) {
-      return resp.data.concursos[0]; 
+    // 1. Tenta recuperar do Cache Local primeiro
+    const cached = localStorage.getItem(CACHE_KEY);
+    const lastFetch = localStorage.getItem(TIMESTAMP_KEY);
+    const agora = Date.now();
+
+    if (cached && lastFetch && (agora - Number(lastFetch) < TRINTA_MINUTOS)) {
+      console.log("⚡ Servindo do LocalStorage (Cache)");
+      return JSON.parse(cached);
     }
-    
-    // Fallback para outros formatos de lista
-    if (Array.isArray(resp.data)) return resp.data[0];
-    
-    return resp.data;
+
+    // 2. Busca na API se não houver cache ou se expirou
+    const resp = await api.get("/ultimos/1");
+    let data = null;
+
+    if (resp.data && resp.data.concursos && Array.isArray(resp.data.concursos)) {
+      data = resp.data.concursos[0];
+    } else if (Array.isArray(resp.data)) {
+      data = resp.data[0];
+    } else {
+      data = resp.data;
+    }
+
+    // 3. Salva no cache para a próxima vez
+    if (data) {
+      localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+      localStorage.setItem(TIMESTAMP_KEY, agora.toString());
+    }
+
+    return data;
   } catch (error) {
-    console.error("ERRO AO BUSCAR ULTIMO CONCURSO:", error);
+    console.error("Erro na API, tentando recuperar cache antigo...", error);
+    const fallback = localStorage.getItem(CACHE_KEY);
+    if (fallback) return JSON.parse(fallback);
     throw error;
   }
 };
