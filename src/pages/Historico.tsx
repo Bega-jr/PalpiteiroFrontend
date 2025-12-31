@@ -23,7 +23,7 @@ export default function Historico() {
     queryFn: async () => {
       if (!user) return [];
       const { data, error } = await supabase
-        .from("palpites")
+        .from("historico_jogos")
         .select("*")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
