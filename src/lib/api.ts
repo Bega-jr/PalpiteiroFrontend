@@ -1,23 +1,17 @@
 import axios from "axios";
 
-// Pega a URL da variável de ambiente (definida no Netlify)
-// Se não existir, usa o backend correto como fallback
-const API_URL = import.meta.env.VITE_API_URL || "https://palpiteiro-backend.vercel.app";
-
-// Remove qualquer barra final para evitar duplicação
-const cleanBaseURL = API_URL.replace(/\/$/, "");
+// URL base sem barra final
+const API_URL = (import.meta.env.VITE_API_URL || "https://palpiteiro-backend.vercel.app").replace(/\/$/, "");
 
 export const api = axios.create({
-  baseURL: cleanBaseURL,  // Sem barra no final aqui
+  baseURL: API_URL + "/",  // Adiciona uma única barra no final
   timeout: 15000,
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-// Todas as chamadas usam path com barra inicial → axios junta corretamente
-// Ex: baseURL = "https://palpiteiro-backend.vercel.app" + "/palpites/fixo"
-
+// Chamadas com barra inicial (padrão)
 export const getPalpiteFixo = async () => {
   const resp = await api.get("/palpites/fixo");
   console.log("DEBUG Palpite Fixo:", resp.data);
@@ -33,7 +27,7 @@ export const getPalpitesEstatisticos = async () => {
 export const getUltimoConcurso = async () => {
   const resp = await api.get("/concurso/ultimo");
   console.log("DEBUG Último Concurso:", resp.data);
-  return resp.data.concurso; // Retorna só o objeto interno
+  return resp.data.concurso;
 };
 
 export const getHistorico = async () => {
