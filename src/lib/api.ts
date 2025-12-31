@@ -37,15 +37,23 @@ export const getPalpitesEstatisticos = async () => {
 /* =====================
    CONCURSO / HISTÓRICO
 ===================== */
+/**
+ * Busca o último concurso e trata a estrutura de lista retornada pelo FastAPI
+ */
 export const getUltimoConcurso = async () => {
   try {
-    // Usando a rota que você confirmou que funciona no Vercel
     const resp = await api.get("/ultimos/1");
     console.log("DEBUG API (getUltimoConcurso):", resp.data);
     
-    // Se a API retornar uma lista, pega o primeiro. Se for objeto, usa direto.
-    const data = Array.isArray(resp.data) ? resp.data[0] : resp.data;
-    return data;
+    // De acordo com seu log, o dado está em resp.data.concursos (que é um Array)
+    if (resp.data && resp.data.concursos && Array.isArray(resp.data.concursos)) {
+      return resp.data.concursos[0]; // Retorna o objeto do último concurso
+    }
+    
+    // Fallback caso a API retorne o objeto direto ou em outro formato de lista
+    if (Array.isArray(resp.data)) return resp.data[0];
+    
+    return resp.data;
   } catch (error) {
     console.error("ERRO AO BUSCAR ULTIMO CONCURSO:", error);
     throw error;
@@ -57,6 +65,9 @@ export const getHistorico = async () => {
   return resp.data;
 };
 
+/**
+ * Salva um palpite no histórico do usuário
+ */
 export const postSalvarPalpite = async (numeros: number[]) => {
   const resp = await api.post("/historico/registrar", {
     id: crypto.randomUUID(),
@@ -67,4 +78,3 @@ export const postSalvarPalpite = async (numeros: number[]) => {
   });
   return resp.data;
 };
-
