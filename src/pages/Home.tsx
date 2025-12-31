@@ -77,12 +77,12 @@ const quickLinks = [
 ];
 
 export default function Home() {
-  const { data: ultimoConcurso, isLoading } = useQuery({
+ const { data: ultimoConcurso, isLoading } = useQuery({
   queryKey: ["ultimoConcurso"],
   queryFn: async () => {
     const response = await api.get("/concurso/ultimo");
     console.log("DEBUG Último Concurso:", response.data);
-    return response.data;  // Retorna objeto direto: { concurso, data, dezenas: [...] }
+    return response.data.concurso;  // Retorna só o objeto concurso
   },
 });
 
