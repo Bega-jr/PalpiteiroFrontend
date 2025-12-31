@@ -104,9 +104,9 @@ export default function Home() {
               </Card>
             </div>
 
-            {/* CIDADES GANHADORAS - Onde saíram os 15 acertos */}
-            {c.listaMunicipioUFGanhadores && c.listaMunicipioUFGanhadores.length > 0 && (
-              <Card className="border-none shadow-sm bg-white overflow-hidden">
+            {/* CIDADES GANHADORAS - Ajustado para ser mais flexível no mapeamento */}
+            {(c?.listaMunicipioUFGanhadores || c?.municipios || c?.ganhadores_por_cidade) && (
+              <Card className="border-none shadow-sm bg-white overflow-hidden mt-6">
                 <div className="bg-red-50 px-6 py-3 border-b border-red-100 flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-red-500" />
                   <h3 className="font-display font-bold text-xs uppercase tracking-wider text-red-700">
@@ -115,20 +115,30 @@ export default function Home() {
                 </div>
                 <CardContent className="p-4">
                   <div className="flex flex-wrap gap-2">
-                    {c.listaMunicipioUFGanhadores.map((item: any, idx: number) => (
+                    {/* Tentamos mapear listaMunicipioUFGanhadores ou qualquer outro nome que o Python possa ter enviado */}
+                    {(c.listaMunicipioUFGanhadores || c.municipios || []).map((item: any, idx: number) => (
                       <div key={idx} className="flex items-center gap-2 bg-gray-50 border border-gray-100 px-3 py-2 rounded-xl text-sm hover:border-red-200 transition-colors">
-                        <span className="font-black text-red-600">{item.uf}</span>
+                        <span className="font-black text-red-600">{item.uf || item.siglaUF}</span>
                         <span className="text-gray-400">|</span>
-                        <span className="font-semibold text-gray-700">{item.municipio}</span>
+                        <span className="font-semibold text-gray-700">{item.municipio || item.nomeMunicipio}</span>
                         <span className="bg-red-100 text-red-700 text-[10px] px-2 py-0.5 rounded-full font-bold">
-                          {item.ganhadores} {item.ganhadores > 1 ? 'apostas' : 'aposta'}
+                          {item.ganhadores || item.quantidadeGanhadores || 1} {item.ganhadores > 1 ? 'apostas' : 'aposta'}
                         </span>
                       </div>
                     ))}
+                    
+                    {/* Se houver ganhadores mas a lista de cidades estiver vazia, é Canal Eletrônico */}
+                    {(Number(c.ganhadores_15) > 0 && (!c.listaMunicipioUFGanhadores || c.listaMunicipioUFGanhadores.length === 0)) && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground italic p-2">
+                        <Info className="h-4 w-4" />
+                        Apostas premiadas realizadas pelo Canal Eletrônico.
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
             )}
+
 
             {/* Tabela de Rateio */}
             <Card className="border-none shadow-md bg-white overflow-hidden">
