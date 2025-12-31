@@ -9,14 +9,14 @@ import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { 
   History, Lock, LogIn, TrendingUp, 
-  Target, Trophy, ChartBar 
+  DollarSign, Target, Trophy, ChartBar 
 } from "lucide-react";
 
 interface Palpite {
   id: string;
   created_at: string;
   numeros: number[];
-  score_medio: number; // Forçaremos ser número
+  score_medio: number;
   metricas: any;
   acertos: number;
 }
@@ -44,11 +44,10 @@ export default function Historico() {
         .order("created_at", { ascending: false });
 
       if (error) {
-        toast({ title: "Erro", description: "Falha ao carregar dados.", variant: "destructive" });
+        toast({ title: "Erro", description: "Não foi possível carregar os dados.", variant: "destructive" });
         throw error;
       }
 
-      // LIMPEZA DE DADOS: Garante que nada venha como null para o componente
       return (data || []).map(item => ({
         ...item,
         score_medio: Number(item.score_medio) || 0,
@@ -59,37 +58,48 @@ export default function Historico() {
     enabled: !!user,
   });
 
-  // Cálculos com segurança absoluta contra null/undefined
-  const totalJogos = palpites?.length || 0;
-  const totalAcertos = palpites?.reduce((acc, p) => acc + (p.acertos || 0), 0) || 0;
-  
-  // Média calculada com fallback manual para evitar toFixed em null
-  let mediaFormatada = "0.0";
-  if (totalJogos > 0) {
-    const calculo = totalAcertos / totalJogos;
-    mediaFormatada = typeof calculo === 'number' && !isNaN(calculo) 
-      ? calculo.toFixed(1) 
-      : "0.0";
-  }
+  // Cálculos Seguros
+  const totalJogos = palpites.length;
+  const totalAcertos = palpites.reduce((acc, p) => acc + p.acertos, 0);
+  const mediaAcertos = totalJogos > 0 ? (totalAcertos / totalJogos).toFixed(1) : "0.0";
 
   if (isLoadingSession) {
-    return <Layout><div className="container py-20 text-center text-muted-foreground animate-pulse">Carregando...</div></Layout>;
+    return <Layout><div className="container py-20 text-center animate-pulse italic">Carregando perfil...</div></Layout>;
   }
 
+  // VIEW: NÃO AUTENTICADO (Design do Código 2)
   if (!user) {
     return (
       <Layout>
-        <section className="bg-primary text-primary-foreground py-12 px-4 text-center">
-          <h1 className="text-3xl font-bold mb-2">Acesso Restrito</h1>
-          <p className="opacity-80">Faça login para salvar e conferir seus palpites.</p>
+        <section className="bg-primary text-primary-foreground py-12 md:py-16">
+          <div className="container">
+            <div className="max-w-2xl">
+              <h1 className="text-3xl md:text-4xl font-bold mb-4">Meu Histórico</h1>
+              <p className="text-white/80">Acompanhe seus palpites salvos, conferência automática e estatísticas.</p>
+            </div>
+          </div>
         </section>
-        <div className="container py-12 flex justify-center">
-          <Card className="w-full max-w-md">
-            <CardContent className="pt-6 text-center space-y-4">
-              <Lock className="h-12 w-12 mx-auto text-muted-foreground opacity-50" />
-              <p className="text-muted-foreground">Você precisa estar logado para ver o histórico.</p>
-              <Button asChild className="w-full">
-                <Link to="/auth"><LogIn className="mr-2 h-4 w-4" /> Entrar Agora</Link>
+
+        <div className="container py-12 md:py-20 text-center">
+          <Card className="max-w-lg mx-auto shadow-lg">
+            <CardHeader>
+              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                <Lock className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <CardTitle className="text-2xl font-bold">Acesso Restrito</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <p className="text-muted-foreground">Faça login para acessar seu histórico de palpites e conferir resultados.</p>
+              <div className="grid grid-cols-2 gap-4 text-sm font-medium">
+                <div className="p-4 bg-muted rounded-lg flex flex-col items-center gap-2">
+                  <History className="h-5 w-5 text-primary" /> Salvar Palpites
+                </div>
+                <div className="p-4 bg-muted rounded-lg flex flex-col items-center gap-2">
+                  <Target className="h-5 w-5 text-primary" /> Conferência
+                </div>
+              </div>
+              <Button asChild className="w-full" size="lg">
+                <Link to="/auth"><LogIn className="mr-2 h-5 w-5" /> Fazer Login</Link>
               </Button>
             </CardContent>
           </Card>
@@ -98,65 +108,116 @@ export default function Historico() {
     );
   }
 
+  // VIEW: AUTENTICADO (Design Premium + Lógica Real)
   return (
     <Layout>
-      <section className="bg-primary text-primary-foreground py-10">
-        <div className="container px-4">
-          <h1 className="text-3xl font-bold mb-4">Seu Painel 2025</h1>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-white/10 p-4 rounded-lg backdrop-blur-sm border border-white/20">
-              <p className="text-xs uppercase tracking-wider opacity-70">Jogos Salvos</p>
-              <p className="text-2xl font-black">{totalJogos}</p>
-            </div>
-            <div className="bg-white/10 p-4 rounded-lg backdrop-blur-sm border border-white/20">
-              <p className="text-xs uppercase tracking-wider opacity-70">Acertos Totais</p>
-              <p className="text-2xl font-black">{totalAcertos}</p>
-            </div>
-            <div className="bg-white/10 p-4 rounded-lg backdrop-blur-sm border border-white/20">
-              <p className="text-xs uppercase tracking-wider opacity-70">Média de Acertos</p>
-              <p className="text-2xl font-black">{mediaFormatada}</p>
-            </div>
+      <section className="bg-primary text-primary-foreground py-12 md:py-16">
+        <div className="container">
+          <div className="max-w-2xl">
+            <h1 className="text-3xl md:text-4xl font-bold mb-2 text-white">Meu Histórico</h1>
+            <p className="text-white/80">Gestão de palpites salvos e análise de desempenho.</p>
           </div>
         </div>
       </section>
 
-      <div className="container py-8 px-4 space-y-6">
-        {isLoadingPalpites ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => <Skeleton key={i} className="h-40 w-full" />)}
-          </div>
-        ) : palpites.length === 0 ? (
-          <Card className="border-dashed py-20 text-center">
-            <History className="h-12 w-12 mx-auto mb-4 opacity-10" />
-            <p className="text-muted-foreground mb-4">Nenhum jogo salvo ainda.</p>
-            <Button asChild variant="outline"><Link to="/palpites">Gerar Palpites</Link></Button>
+      <div className="container py-8 md:py-12 space-y-8">
+        {/* Resumo Financeiro/Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+          <Card className="border-none shadow-sm bg-card">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2 font-medium uppercase tracking-wider">
+                <History className="h-4 w-4 text-primary" /> Total de Jogos
+              </div>
+              <div className="text-3xl font-bold">{totalJogos}</div>
+            </CardContent>
           </Card>
-        ) : (
-          <div className="grid gap-6">
-            {palpites.map((palpite) => (
-              <Card key={palpite.id} className="overflow-hidden border-l-4 border-l-primary">
-                <CardHeader className="bg-muted/30 py-3 flex flex-row justify-between items-center space-y-0 text-[10px] font-mono text-muted-foreground uppercase tracking-tighter">
-                   <span>Data: {new Date(palpite.created_at).toLocaleString('pt-BR')}</span>
-                   <span className="bg-primary/20 text-primary px-2 py-0.5 rounded">ID: {palpite.id.slice(0,8)}</span>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <PalpiteCard
-                    numeros={palpite.numeros}
-                    scoreMedio={palpite.score_medio ?? 0}
-                    metricas={palpite.metricas ?? {}}
-                    showSaveButton={false}
-                  />
-                  {palpite.acertos > 0 && (
-                    <div className="mt-4 flex items-center gap-2 text-green-600 font-bold text-sm">
-                      <Trophy className="h-4 w-4" />
-                      <span>{palpite.acertos} ACERTOS IDENTIFICADOS</span>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+          <Card className="border-none shadow-sm bg-card">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2 font-medium uppercase tracking-wider">
+                <Trophy className="h-4 w-4 text-primary" /> Acertos Totais
+              </div>
+              <div className="text-3xl font-bold text-green-600">{totalAcertos}</div>
+            </CardContent>
+          </Card>
+          <Card className="border-none shadow-sm bg-card">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2 font-medium uppercase tracking-wider">
+                <ChartBar className="h-4 w-4 text-primary" /> Média Acertos
+              </div>
+              <div className="text-3xl font-bold">{mediaAcertos}</div>
+            </CardContent>
+          </Card>
+          <Card className="border-none shadow-sm bg-card">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2 font-medium uppercase tracking-wider">
+                <TrendingUp className="h-4 w-4 text-primary" /> ROI Estimado
+              </div>
+              <div className="text-3xl font-bold text-blue-600">--</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Lista de Jogos */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold tracking-tight">Seus Palpites Salvos</h2>
+            <Button size="sm" asChild variant="outline" className="hidden sm:flex">
+              <Link to="/palpites">Novo Palpite</Link>
+            </Button>
           </div>
-        )}
+
+          {isLoadingPalpites ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => <Skeleton key={i} className="h-48 w-full rounded-xl" />)}
+            </div>
+          ) : palpites.length === 0 ? (
+            <Card className="border-dashed py-20">
+              <CardContent className="text-center">
+                <History className="h-12 w-12 mx-auto mb-4 opacity-20 text-primary" />
+                <p className="text-xl font-medium text-muted-foreground">Nenhum palpite salvo.</p>
+                <Button asChild className="mt-4" variant="secondary">
+                  <Link to="/palpites">Gerar Agora</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-6">
+              {palpites.map((palpite) => (
+                <Card key={palpite.id} className="overflow-hidden shadow-md hover:shadow-lg transition-all border-none">
+                  <div className="bg-muted/50 px-6 py-3 border-b flex justify-between items-center">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
+                      {new Date(palpite.created_at).toLocaleDateString('pt-BR', { 
+                        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' 
+                      })}
+                    </span>
+                    <span className="text-[10px] bg-primary/10 text-primary px-2 py-1 rounded font-bold uppercase">
+                      Salvo em 2025
+                    </span>
+                  </div>
+                  <CardContent className="p-6 md:p-8">
+                    <PalpiteCard
+                      numeros={palpite.numeros}
+                      scoreMedio={palpite.score_medio}
+                      metricas={palpite.metricas}
+                      showSaveButton={false}
+                    />
+                    {palpite.acertos > 0 && (
+                      <div className="mt-6 flex items-center gap-3 p-4 bg-green-50 rounded-xl border border-green-100">
+                        <div className="bg-green-600 text-white p-2 rounded-full">
+                          <Trophy className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-green-700 font-bold uppercase tracking-wider">Resultado da Conferência</p>
+                          <p className="text-green-800 font-bold">{palpite.acertos} números acertados!</p>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </Layout>
   );
