@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Clover, Mail, Lock, User, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
 
 export default function Auth() {
   const [searchParams] = useSearchParams();
@@ -23,16 +24,34 @@ export default function Auth() {
     confirmPassword: "",
   });
 
-  const handleLogin = (e: React.FormEvent) => {
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implementar login real com Supabase
-    toast({
-      title: "Funcionalidade em desenvolvimento",
-      description: "O sistema de login será implementado em breve.",
+    setLoading(true);
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: loginForm.email,
+      password: loginForm.password,
     });
+
+    if (error) {
+      toast({
+        title: "Erro ao entrar",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Bem-vindo de volta!",
+        description: "Login realizado com sucesso.",
+      });
+      window.location.href = "/historico";
+    }
+    setLoading(false);
   };
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (signupForm.password !== signupForm.confirmPassword) {
       toast({
@@ -42,11 +61,29 @@ export default function Auth() {
       });
       return;
     }
-    // TODO: Implementar cadastro real com Supabase
-    toast({
-      title: "Funcionalidade em desenvolvimento",
-      description: "O sistema de cadastro será implementado em breve.",
+    setLoading(true);
+
+    const { error } = await supabase.auth.signUp({
+      email: signupForm.email,
+      password: signupForm.password,
+      options: {
+        data: { name: signupForm.name },
+      },
     });
+
+    if (error) {
+      toast({
+        title: "Erro ao cadastrar",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Cadastro realizado!",
+        description: "Verifique seu email para confirmar a conta.",
+      });
+    }
+    setLoading(false);
   };
 
   return (
@@ -59,7 +96,6 @@ export default function Auth() {
               Voltar ao início
             </Link>
           </Button>
-
           <Card>
             <CardHeader className="text-center">
               <div className="w-16 h-16 bg-primary rounded-xl flex items-center justify-center mx-auto mb-4">
@@ -88,10 +124,9 @@ export default function Auth() {
                           placeholder="seu@email.com"
                           className="pl-10"
                           value={loginForm.email}
-                          onChange={(e) =>
-                            setLoginForm({ ...loginForm, email: e.target.value })
-                          }
+                          onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
                           required
+                          disabled={loading}
                         />
                       </div>
                     </div>
@@ -105,18 +140,14 @@ export default function Auth() {
                           placeholder="••••••••"
                           className="pl-10"
                           value={loginForm.password}
-                          onChange={(e) =>
-                            setLoginForm({
-                              ...loginForm,
-                              password: e.target.value,
-                            })
-                          }
+                          onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
                           required
+                          disabled={loading}
                         />
                       </div>
                     </div>
-                    <Button type="submit" className="w-full">
-                      Entrar
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading ? "Entrando..." : "Entrar"}
                     </Button>
                   </form>
                 </TabsContent>
@@ -133,10 +164,9 @@ export default function Auth() {
                           placeholder="Seu nome"
                           className="pl-10"
                           value={signupForm.name}
-                          onChange={(e) =>
-                            setSignupForm({ ...signupForm, name: e.target.value })
-                          }
+                          onChange={(e) => setSignupForm({ ...signupForm, name: e.target.value })}
                           required
+                          disabled={loading}
                         />
                       </div>
                     </div>
@@ -150,13 +180,9 @@ export default function Auth() {
                           placeholder="seu@email.com"
                           className="pl-10"
                           value={signupForm.email}
-                          onChange={(e) =>
-                            setSignupForm({
-                              ...signupForm,
-                              email: e.target.value,
-                            })
-                          }
+                          onChange={(e) => setSignupForm({ ...signupForm, email: e.target.value })}
                           required
+                          disabled={loading}
                         />
                       </div>
                     </div>
@@ -170,13 +196,9 @@ export default function Auth() {
                           placeholder="••••••••"
                           className="pl-10"
                           value={signupForm.password}
-                          onChange={(e) =>
-                            setSignupForm({
-                              ...signupForm,
-                              password: e.target.value,
-                            })
-                          }
+                          onChange={(e) => setSignupForm({ ...signupForm, password: e.target.value })}
                           required
+                          disabled={loading}
                         />
                       </div>
                     </div>
@@ -190,26 +212,20 @@ export default function Auth() {
                           placeholder="••••••••"
                           className="pl-10"
                           value={signupForm.confirmPassword}
-                          onChange={(e) =>
-                            setSignupForm({
-                              ...signupForm,
-                              confirmPassword: e.target.value,
-                            })
-                          }
+                          onChange={(e) => setSignupForm({ ...signupForm, confirmPassword: e.target.value })}
                           required
+                          disabled={loading}
                         />
                       </div>
                     </div>
-                    <Button type="submit" className="w-full">
-                      Criar Conta
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading ? "Criando conta..." : "Criar Conta"}
                     </Button>
                   </form>
                 </TabsContent>
               </Tabs>
-
               <p className="text-xs text-center text-muted-foreground mt-6">
-                Ao continuar, você concorda com nossos Termos de Uso e Política
-                de Privacidade.
+                Ao continuar, você concorda com nossos Termos de Uso e Política de Privacidade.
               </p>
             </CardContent>
           </Card>
