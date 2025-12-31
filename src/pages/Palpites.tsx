@@ -1,126 +1,194 @@
-import { useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Layout } from "@/components/Layout";
 import { PalpiteCard } from "@/components/PalpiteCard";
-import { Card, CardContent } from "@/components/ui/card";
+import { LoadingCard } from "@/components/LoadingStates";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton"; // Se tiver Shadcn instalado
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
+import { Badge } from "@/components/ui/badge";
+import { getPalpiteFixo, getPalpitesEstatisticos } from "@/lib/api"; // Importação das funções nomeadas
+import { Clover, RefreshCw, Star, Info } from "lucide-react";
+import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
-// 1. Definição de Interface para os dados
-interface Palpite {
-  id: string;
-  created_at: string;
-  numeros: number[];
-  score_medio?: number;
-  metricas?: any;
-  acertos?: number;
-}
-
-export default function Historico() {
+export default function Palpites() {
   const { toast } = useToast();
-  const navigate = useNavigate();
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  // 2. Query de Sessão (considerar mover para um contexto global no futuro)
-  const { data: sessionData, isLoading: isLoadingSession } = useQuery({
-    queryKey: ["session"],
-    queryFn: async () => {
-      const { data } = await supabase.auth.getSession();
-      return data.session;
-    },
+  // Busca do Palpite Fixo
+  const {
+    data: palpiteFixo,
+    isLoading: loadingFixo,
+    refetch: refetchFixo,
+  } = useQuery({
+    queryKey: ["palpiteFixo", refreshKey],
+    queryFn: () => getPalpiteFixo(), // Usa a função exportada do api.ts
   });
 
-  const user = sessionData?.user;
-
-  const { data: palpites = [], isLoading: isLoadingPalpites } = useQuery({
-    queryKey: ["palpites-usuario", user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("historico_jogos")
-        .select("*")
-        .eq("user_id", user?.id)
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        toast({
-          title: "Erro ao carregar",
-          description: error.message,
-          variant: "destructive",
-        });
-        throw error;
-      }
-      return data as Palpite[];
-    },
-    enabled: !!user, // Só executa se o user existir
+  // Busca dos Palpites Estatísticos
+  const {
+    data: palpitesEstatisticos,
+    isLoading: loadingEstatisticos,
+    refetch: refetchEstatisticos,
+  } = useQuery({
+    queryKey: ["palpitesEstatisticos", refreshKey],
+    queryFn: () => getPalpitesEstatisticos(), // Usa a função exportada do api.ts
   });
 
-  // 3. Redirecionamento correto sem refresh de página
-  useEffect(() => {
-    if (!isLoadingSession && !user) {
-      navigate("/auth");
-    }
-  }, [user, isLoadingSession, navigate]);
+  const handleRefresh = async () => {
+    setRefreshKey((prev) => prev + 1);
+    await Promise.all([refetchFixo(), refetchEstatisticos()]);
+    toast({
+      title: "Palpites atualizados!",
+      description: "Novos palpites foram gerados com base nos dados de 2025.",
+    });
+  };
 
-  if (isLoadingSession || !user) return null;
+  const handleSave = (numeros: number[]) => {
+    toast({
+      title: "Login necessário",
+      description: "Faça login para salvar seus palpites no histórico.",
+      variant: "destructive",
+    });
+  };
 
   return (
     <Layout>
-      <div className="container py-10">
-        <header className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Meu Histórico</h1>
-        </header>
-
-        {isLoadingPalpites ? (
-          // 4. Skeleton Loading para melhor UX
-          <div className="grid gap-6">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-[200px] w-full rounded-lg" />
-            ))}
+      {/* Header seguindo o padrão da página de Estatísticas */}
+      <section className="gradient-hero text-primary-foreground py-12 md:py-16">
+        <div className="container">
+          <div className="max-w-2xl">
+            <h1 className="font-display text-3xl md:text-4xl font-bold mb-4">
+              Palpites Estatísticos
+            </h1>
+            <p className="text-white/80">
+              Palpites gerados por algoritmo inteligente que analisa frequência,
+              atraso e ciclos de cada número. Filtros profissionais garantem
+              diversidade e equilíbrio para 2025.
+            </p>
           </div>
-        ) : palpites.length === 0 ? (
-          <Card>
-            <CardContent className="p-10 text-center">
-              <p className="text-muted-foreground text-lg mb-4">
-                Você ainda não salvou nenhum palpite.
-              </p>
-              <Button asChild>
-                <Link to="/palpites">Gerar Palpites Agora</Link>
-              </Button>
+        </div>
+      </section>
+
+      <div className="container py-8 md:py-12 space-y-8">
+        {/* Botão de Atualizar */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Info className="h-4 w-4" />
+            Clique em "Gerar Novos" para atualizar as sugestões do algoritmo.
+          </div>
+          <Button onClick={handleRefresh} variant="outline" className="shadow-sm">
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Gerar Novos Palpites
+          </Button>
+        </div>
+
+        {/* Palpite Fixo do Dia */}
+        <section>
+          <div className="flex items-center gap-2 mb-4">
+            <Star className="h-5 w-5 text-lottery-gold fill-lottery-gold" />
+            <h2 className="font-display text-xl font-bold">
+              Palpite Fixo do Dia
+            </h2>
+            <Badge variant="secondary" className="bg-amber-100 text-amber-700 border-amber-200">Destaque</Badge>
+          </div>
+          {loadingFixo ? (
+            <LoadingCard />
+          ) : palpiteFixo?.palpite ? (
+            <PalpiteCard
+              numeros={palpiteFixo.palpite}
+              scoreMedio={palpiteFixo.score_medio}
+              highlight
+              showSaveButton
+              onSave={() => handleSave(palpiteFixo.palpite)}
+            />
+          ) : (
+            <Card className="border-dashed bg-muted/20">
+              <CardContent className="p-6 text-center text-muted-foreground italic">
+                Aguardando processamento do palpite fixo...
+              </CardContent>
+            </Card>
+          )}
+        </section>
+
+        {/* Filtros Aplicados */}
+        {palpitesEstatisticos?.filtros_aplicados && (
+          <Card className="border-none shadow-sm bg-muted/10">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-medium flex items-center gap-2">
+                <Clover className="h-4 w-4 text-primary" />
+                Configuração do Filtro Inteligente
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="outline" className="bg-white">
+                  Soma: {palpitesEstatisticos.filtros_aplicados.soma_range[0]}-
+                  {palpitesEstatisticos.filtros_aplicados.soma_range[1]}
+                </Badge>
+                <Badge variant="outline" className="bg-white">
+                  Pares: {palpitesEstatisticos.filtros_aplicados.pares_range[0]}-
+                  {palpitesEstatisticos.filtros_aplicados.pares_range[1]}
+                </Badge>
+                <Badge variant="outline" className="bg-white">
+                  Primos: {palpitesEstatisticos.filtros_aplicados.primos_range[0]}-
+                  {palpitesEstatisticos.filtros_aplicados.primos_range[1]}
+                </Badge>
+                <Badge variant="outline" className="bg-white">
+                  Moldura: {palpitesEstatisticos.filtros_aplicados.moldura_range[0]}-
+                  {palpitesEstatisticos.filtros_aplicados.moldura_range[1]}
+                </Badge>
+                <Badge variant="outline" className="bg-white">
+                  Repetidos: {palpitesEstatisticos.filtros_aplicados.max_repetidos}
+                </Badge>
+                <Badge variant="outline" className="bg-white">
+                  Seq. Máx: {palpitesEstatisticos.filtros_aplicados.max_sequencia}
+                </Badge>
+                <Badge variant="primary" className="bg-primary/10 text-primary border-primary/20">
+                  Score Mín: {palpitesEstatisticos.filtros_aplicados.score_minimo}
+                </Badge>
+              </div>
             </CardContent>
           </Card>
-        ) : (
-          <div className="grid gap-6">
-            {palpites.map((palpite) => (
-              <div key={palpite.id} className="border rounded-lg p-6 bg-card hover:shadow-md transition-shadow">
-                <p className="text-xs text-muted-foreground mb-4">
-                  {new Date(palpite.created_at).toLocaleDateString("pt-BR", {
-                    day: "2-digit",
-                    month: "long",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </p>
+        )}
+
+        {/* 7 Palpites Estatísticos */}
+        <section>
+          <div className="flex items-center gap-2 mb-4">
+            <Clover className="h-5 w-5 text-primary" />
+            <h2 className="font-display text-xl font-bold uppercase tracking-tight">
+              Sugestões Técnicas (7 Jogos)
+            </h2>
+          </div>
+          {loadingEstatisticos ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <LoadingCard key={i} />
+              ))}
+            </div>
+          ) : palpitesEstatisticos?.palpites ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {palpitesEstatisticos.palpites.map((palpite: any, index: number) => (
                 <PalpiteCard
+                  key={index}
+                  index={index}
                   numeros={palpite.numeros}
                   scoreMedio={palpite.score_medio}
                   metricas={palpite.metricas}
-                  showSaveButton={false}
+                  showSaveButton
+                  onSave={() => handleSave(palpite.numeros)}
                 />
-                {typeof palpite.acertos === 'number' && (
-                  <div className="mt-4 p-2 bg-primary/10 rounded text-center">
-                    <span className="font-bold text-primary">
-                      {palpite.acertos} Acertos Detectados
-                    </span>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          ) : (
+            <Card className="border-none bg-muted/10">
+              <CardContent className="p-10 text-center text-muted-foreground italic font-medium">
+                Não foi possível processar os palpites no momento. Tente atualizar a página.
+              </CardContent>
+            </Card>
+          )}
+        </section>
       </div>
     </Layout>
   );
 }
+
