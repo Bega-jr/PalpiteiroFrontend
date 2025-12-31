@@ -59,14 +59,25 @@ export default function Historico() {
     enabled: !!user,
   });
 
-  // 3. Cálculos de Estatísticas (Derivados dos dados reais)
+    // 3. Cálculos de Estatísticas (Com verificações de segurança)
+  const totalJogos = palpites?.length || 0;
+  
+  const totalAcertos = palpites?.reduce((acc, p) => {
+    // Garante que p.acertos seja um número antes de somar
+    const acertos = typeof p.acertos === 'number' ? p.acertos : 0;
+    return acc + acertos;
+  }, 0) || 0;
+
+  const mediaAcertos = totalJogos > 0 
+    ? (totalAcertos / totalJogos).toFixed(1) 
+    : "0.0";
+
   const stats = {
-    total: palpites.length,
-    totalAcertos: palpites.reduce((acc, p) => acc + (p.acertos || 0), 0),
-    mediaAcertos: palpites.length > 0 
-      ? (palpites.reduce((acc, p) => acc + (p.acertos || 0), 0) / palpites.length).toFixed(1)
-      : 0
+    total: totalJogos,
+    totalAcertos: totalAcertos,
+    mediaAcertos: mediaAcertos
   };
+
 
   // ESTADO: Carregando Sessão
   if (isLoadingSession) {
