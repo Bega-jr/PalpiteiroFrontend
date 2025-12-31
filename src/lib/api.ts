@@ -13,44 +13,17 @@ export const api = axios.create({
   },
 });
 
-/* =====================
-   ESTATÍSTICAS
-===================== */
-export const getEstatisticasScore = async () => {
-  const resp = await api.get("/estatisticas/base");
-  return resp.data;
-};
-
-/* =====================
-   PALPITES
-===================== */
-export const getPalpiteFixo = async () => {
-  const resp = await api.get("/palpites/fixo");
-  return resp.data;
-};
-
-export const getPalpitesEstatisticos = async () => {
-  const resp = await api.get("/palpites/estatisticos");
-  return resp.data;
-};
-
-/* =====================
-   CONCURSO / HISTÓRICO
-===================== */
-/**
- * Busca o último concurso e trata a estrutura de lista retornada pelo FastAPI
- */
 export const getUltimoConcurso = async () => {
   try {
     const resp = await api.get("/ultimos/1");
-    console.log("DEBUG API (getUltimoConcurso):", resp.data);
+    console.log("DEBUG API (Dados Recebidos):", resp.data);
     
-    // De acordo com seu log, o dado está em resp.data.concursos (que é um Array)
+    // Acessa a lista 'concursos' conforme seu backend FastAPI
     if (resp.data && resp.data.concursos && Array.isArray(resp.data.concursos)) {
-      return resp.data.concursos[0]; // Retorna o objeto do último concurso
+      return resp.data.concursos[0]; 
     }
     
-    // Fallback caso a API retorne o objeto direto ou em outro formato de lista
+    // Fallback para outros formatos de lista
     if (Array.isArray(resp.data)) return resp.data[0];
     
     return resp.data;
@@ -60,14 +33,21 @@ export const getUltimoConcurso = async () => {
   }
 };
 
+export const getEstatisticasScore = async () => {
+  const resp = await api.get("/estatisticas/base");
+  return resp.data;
+};
+
+export const getPalpitesEstatisticos = async () => {
+  const resp = await api.get("/palpites/estatisticos");
+  return resp.data;
+};
+
 export const getHistorico = async () => {
   const resp = await api.get("/historico/");
   return resp.data;
 };
 
-/**
- * Salva um palpite no histórico do usuário
- */
 export const postSalvarPalpite = async (numeros: number[]) => {
   const resp = await api.post("/historico/registrar", {
     id: crypto.randomUUID(),
