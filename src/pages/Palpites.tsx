@@ -4,7 +4,7 @@ import { PalpiteCard } from "@/components/PalpiteCard";
 import { LoadingCard } from "@/components/LoadingStates";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Clover, RefreshCw, Star, Info } from "lucide-react";
+import { Clover, RefreshCw, Star, Info, AlertCircle, Zap } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { getPalpiteFixo, getPalpitesEstatisticos } from "@/lib/api";
@@ -28,7 +28,7 @@ export default function Palpites() {
 
   const numerosFixo = palpiteFixoData?.numeros || [];
 
-  // Palpites Estatísticos
+  // Palpites Estatísticos (Endpoint: /palpites/estatisticos)
   const {
     data: palpitesData,
     isLoading: loadingEstatisticos,
@@ -40,14 +40,18 @@ export default function Palpites() {
     staleTime: 1000 * 60 * 15,
   });
 
-  const palpites = palpitesData?.palpites || [];
+  // Extração segura do array de palpites
+  const palpites = palpitesData?.palpites || []; 
+  const isLoading = loadingFixo || loadingEstatisticos;
+  const error = errorFixo || errorEstatisticos;
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setRefreshKey((prev) => prev + 1);
     toast({
-      title: "Palpites atualizados!",
-      description: "Novos palpites gerados com sucesso para o sorteio de hoje.",
+      title: "Gerando novos palpites...",
+      description: "O algoritmo está processando novas combinações.",
     });
+    // O useQuery refaz o fetch automaticamente quando o refreshKey muda.
   };
 
   // Função de salvar palpite (fixo ou estatístico)
@@ -60,15 +64,17 @@ export default function Palpites() {
         description: "Faça login para salvar seus palpites.",
         variant: "destructive",
       });
-      window.location.href = "/auth";
+      // Mantive o window.location.href conforme seu código funcional anterior
+      window.location.href = "/auth"; 
       return;
     }
 
-    const { error } = await supabase.from("palpites").insert({
+    const { error } = await supabase.from("historico_jogos").insert({ // Ajustei para historico_jogos (padrão anterior)
       user_id: session.user.id,
       tipo,
-      numeros: numeros.sort((a, b) => a - b), // Salva ordenado
+      numeros: numeros.sort((a, b) => a - b),
       created_at: new Date().toISOString(),
+      // Você pode precisar adicionar campos como 'score_medio' e 'metricas' aqui, se o Supabase exigir.
     });
 
     if (error) {
@@ -87,66 +93,74 @@ export default function Palpites() {
 
   return (
     <Layout>
-      <section className="gradient-hero text-primary-foreground py-12">
-        <div className="container max-w-2xl">
-          <h1 className="text-3xl font-bold mb-4">Palpites Estatísticos</h1>
-          <p className="text-white/80">
-            Palpites gerados por algoritmo inteligente com base em estatísticas reais da Lotofácil. Atualizado para o concurso de hoje.
+      {/* Header Premium */}
+      <section className="bg-primary text-primary-foreground py-12 md:py-16">
+        <div className="container max-w-3xl">
+          <h1 className="text-3xl md:text-5xl font-bold mb-4">Palpites Inteligentes</h1>
+          <p className="text-white/80 text-lg leading-relaxed">
+            Algoritmo estatístico avançado que analisa frequência, atraso e ciclos de cada número.
           </p>
         </div>
       </section>
 
-      <div className="container py-10 space-y-10">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <div className="container py-8 md:py-12 space-y-8">
+        
+        {/* Barra de Ações e Info */}
+        <div className="flex items-center justify-between p-4 bg-muted rounded-xl shadow-sm">
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
             <Info className="h-4 w-4" />
-            Clique em atualizar para gerar novos palpites
+            <p className="hidden sm:inline">Clique em "Gerar Novos" para processar novas combinações.</p>
           </div>
-          <Button onClick={handleRefresh} variant="outline">
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Atualizar Palpites
+          <Button onClick={handleRefresh} disabled={isLoading} variant="secondary" className="shadow-md">
+            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            Gerar Novos
           </Button>
         </div>
 
+        {/* Handling de Erro Global */}
+        {error && (
+            <Card className="border-destructive shadow-lg">
+                <CardContent className="p-6 text-center text-destructive flex items-center justify-center gap-3">
+                    <AlertCircle className="h-5 w-5" />
+                    <p>Erro ao comunicar com a API: {error.message}. Tente novamente mais tarde.</p>
+                </CardContent>
+            </Card>
+        )}
+
         {/* Palpite Fixo */}
         <section>
-          <div className="flex items-center gap-2 mb-4">
-            <Star className="h-5 w-5 text-yellow-400" />
-            <h2 className="text-xl font-bold">Palpite Fixo do Dia</h2>
-            <Badge variant="default">Destaque</Badge>
+          <div className="flex items-center gap-3 mb-4">
+            <Star className="h-6 w-6 text-yellow-500" />
+            <h2 className="text-2xl font-bold">Palpite Fixo do Dia</h2>
+            <Badge variant="default" className="bg-yellow-500 hover:bg-yellow-500">Premium</Badge>
           </div>
 
           {loadingFixo ? (
             <LoadingCard />
-          ) : errorFixo ? (
-            <div className="p-6 border rounded-lg bg-destructive/10 text-center">
-              <p className="text-destructive text-sm">
-                Erro ao carregar o palpite fixo. Tente atualizar.
-              </p>
-            </div>
           ) : numerosFixo.length === 15 ? (
             <PalpiteCard
               numeros={numerosFixo}
-              scoreMedio={undefined}
+              scoreMedio={undefined} // Ajuste conforme a prop de PalpiteCard
               highlight
               showSaveButton
               onSave={() => handleSavePalpite(numerosFixo, "fixo")}
             />
           ) : (
-            <div className="p-6 border rounded-lg bg-muted/20 text-center">
-              <p className="text-muted-foreground text-sm">
-                Palpite fixo indisponível no momento.
-              </p>
-            </div>
+            <Card className="border-dashed py-8">
+              <CardContent className="text-center text-muted-foreground">
+                <Zap className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                <p>Palpite fixo indisponível no momento ou já salvo para hoje.</p>
+              </CardContent>
+            </Card>
           )}
         </section>
 
-        {/* Palpites Estatísticos */}
+        {/* Palpites Estatísticos (Array de 6 palpites) */}
         <section>
-          <div className="flex items-center gap-2 mb-4">
-            <Clover className="h-5 w-5 text-primary" />
-            <h2 className="text-xl font-bold">Palpites Estatísticos</h2>
-            <Badge variant="secondary">{palpites.length} palpites gerados</Badge>
+          <div className="flex items-center gap-3 mb-6">
+            <Clover className="h-6 w-6 text-primary" />
+            <h2 className="text-2xl font-bold">Combinações Estatísticas</h2>
+            <Badge variant="secondary" className="ml-auto">{palpites.length} palpites gerados</Badge>
           </div>
 
           {loadingEstatisticos ? (
@@ -155,32 +169,27 @@ export default function Palpites() {
                 <LoadingCard key={i} />
               ))}
             </div>
-          ) : errorEstatisticos ? (
-            <div className="p-6 border rounded-lg bg-destructive/10 text-center">
-              <p className="text-destructive">
-                Erro ao carregar palpites estatísticos. Tente atualizar.
-              </p>
-            </div>
           ) : palpites.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {palpites.map((palpite: any, index: number) => (
                 <PalpiteCard
                   key={index}
-                  index={index + 1}
+                  // Passe scoreMedio e metricas, mesmo que venham como undefined inicialmente
                   numeros={palpite.numeros || []}
-                  scoreMedio={palpite.score_medio}
-                  metricas={palpite.estatistica?.metricas}
+                  scoreMedio={palpite.score_medio ?? undefined} 
+                  metricas={palpite.metricas ?? undefined} 
                   showSaveButton
                   onSave={() => handleSavePalpite(palpite.numeros, "estatistico")}
                 />
               ))}
             </div>
           ) : (
-            <div className="p-6 border rounded-lg bg-muted/20 text-center">
-              <p className="text-muted-foreground text-sm">
-                Nenhum palpite estatístico disponível no momento. Clique em atualizar para gerar novos.
-              </p>
-            </div>
+             <Card className="border-dashed py-8">
+              <CardContent className="text-center text-muted-foreground">
+                <Clover className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                <p>Nenhum palpite gerado. Clique em "Gerar Novos" para processar.</p>
+              </CardContent>
+            </Card>
           )}
         </section>
       </div>
