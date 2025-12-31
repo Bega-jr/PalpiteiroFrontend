@@ -4,38 +4,53 @@ import { ConcursoCard } from "@/components/ConcursoCard";
 import { LoadingCard } from "@/components/LoadingStates";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { useState } from "react";
 import { api } from "@/lib/api";
 
 export default function Resultados() {
-  const [busca, setBusca] = useState("");
+  const [buscaNumero, setBuscaNumero] = useState("");
   const [concursoBuscado, setConcursoBuscado] = useState<number | null>(null);
 
-  const { data: ultimosConcursos = [], isLoading } = useQuery({
+  // Últimos 10 concursos (fixo, como você pediu)
+  const { data: ultimosConcursos = [], isLoading: loadingUltimos } = useQuery({
     queryKey: ["ultimos-concursos"],
     queryFn: async () => {
-      const resp = await api.get("/ultimos/30");
-      return resp.data; // array de concursos
+      const resp = await api.get("/ultimos/10");  // Fixo em 10 — mude se quiser
+      return resp.data;  // Array de concursos
     },
-    staleTime: 1000 * 60 * 30, // 30 min cache
+    staleTime: 1000 * 60 * 30,  // Cache de 30 min
+    refetchOnWindowFocus: false,
   });
 
+  // Concurso específico pela busca
   const { data: concursoEspecifico, isLoading: loadingEspecifico } = useQuery({
-    queryKey: ["concurso", concursoBuscado],
+    queryKey: ["concurso-especifico", concursoBuscado],
     queryFn: async () => {
       const resp = await api.get(`/concurso/${concursoBuscado}`);
-      return resp.data.concurso;
+      return resp.data.concurso;  // Objeto único do concurso
     },
-    enabled: !!concursoBuscado,
+    enabled: !!concursoBuscado,  // Só chama se houver número
+    staleTime: 1000 * 60 * 60,  // Cache de 1 hora
   });
 
   const handleBusca = () => {
-    const num = parseInt(busca);
-    if (num > 0) setConcursoBuscado(num);
+    const num = parseInt(buscaNumero.trim());
+    if (!isNaN(num) && num > 0) {
+      setConcursoBuscado(num);
+    } else {
+      toast({
+        title: "Número inválido",
+        description: "Digite um número de concurso válido.",
+        variant: "destructive",
+      });
+    }
   };
 
+  // Decide o que exibir: concurso buscado ou lista de últimos
   const concursosExibidos = concursoEspecifico ? [concursoEspecifico] : ultimosConcursos;
 
+  // Função para montar array de dezenas (o backend usa bola1 a bola15)
   const montarDezenas = (concurso: any) => [
     Number(concurso.bola1),
     Number(concurso.bola2),
@@ -56,27 +71,43 @@ export default function Resultados() {
 
   return (
     <Layout>
-      <div className="container py-10">
-        <h1 className="text-3xl font-bold mb-6">Resultados da Lotofácil</h1>
+      <div className="container py-10 max-w-5xl">
+        <h1 className="text-3xl font-bold mb-8 text-center">Resultados da Lotofácil</h1>
 
-        <div className="flex gap-2 mb-8 max-w-md">
+        {/* Área de busca */}
+        <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto mb-12">
           <Input
-            placeholder="Digite o número do concurso"
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
+            type="number"
+            placeholder="Digite o número do concurso (ex: 3575)"
+            value={buscaNumero}
+            onChange={(e) => setBuscaNumero(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleBusca()}
           />
-          <Button onClick={handleBusca}>Buscar</Button>
+          <Button onClick={handleBusca}>
+            Buscar Concurso
+          </Button>
+          {concursoBuscado && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setConcursoBuscado(null);
+                setBuscaNumero("");
+              }}
+            >
+              Ver últimos 10
+            </Button>
+          )}
         </div>
 
-        {isLoading || loadingEspecifico ? (
-          <div className="space-y-6">
+        {/* Loading ou lista */}
+        {(loadingUltimos || loadingEspecifico) ? (
+          <div className="grid gap-8">
             {Array.from({ length: 5 }).map((_, i) => (
               <LoadingCard key={i} />
             ))}
           </div>
         ) : concursosExibidos.length > 0 ? (
-          <div className="space-y-8">
+          <div className="grid gap-8">
             {concursosExibidos.map((concurso: any) => (
               <ConcursoCard
                 key={concurso.concurso}
@@ -87,9 +118,13 @@ export default function Resultados() {
             ))}
           </div>
         ) : (
-          <p className="text-center text-muted-foreground">
-            Nenhum concurso encontrado.
-          </p>
+          <Card>
+            <CardContent className="p-10 text-center">
+              <p className="text-muted-foreground text-lg">
+                Nenhum concurso encontrado para o número informado.
+              </p>
+            </CardContent>
+          </Card>
         )}
       </div>
     </Layout>
