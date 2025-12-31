@@ -11,18 +11,13 @@ export const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-/* =====================
-   ESTATÍSTICAS
-===================== */
+/* ESTATÍSTICAS */
 export const getEstatisticasScore = async () => {
   const resp = await api.get("/estatisticas/base");
   return resp.data;
 };
 
-/* =====================
-   PALPITES
-===================== */
-// Função que estava faltando e causou o erro de build
+/* PALPITES (Essencial para o Build) */
 export const getPalpiteFixo = async () => {
   const resp = await api.get("/palpites/fixo");
   return resp.data;
@@ -33,9 +28,7 @@ export const getPalpitesEstatisticos = async () => {
   return resp.data;
 };
 
-/* =====================
-   CONCURSO / HISTÓRICO
-===================== */
+/* CONCURSO COM CACHE INTELIGENTE */
 export const getUltimoConcurso = async () => {
   const CACHE_KEY = "palpiteiro_concurso_cache";
   const TIMESTAMP_KEY = "palpiteiro_cache_time";
@@ -47,15 +40,15 @@ export const getUltimoConcurso = async () => {
     const agora = Date.now();
 
     if (cached && lastFetch && (agora - Number(lastFetch) < TRINTA_MINUTOS)) {
-      console.log("⚡ Servindo do LocalStorage (Cache)");
       return JSON.parse(cached);
     }
 
     const resp = await api.get("/ultimos/1");
     let data = null;
 
+    // Acessa a lista 'concursos' do seu backend FastAPI
     if (resp.data && resp.data.concursos && Array.isArray(resp.data.concursos)) {
-      data = resp.data.concursos[0]; // Pega o primeiro objeto da lista
+      data = resp.data.concursos[0]; 
     } else if (Array.isArray(resp.data)) {
       data = resp.data[0];
     } else {
@@ -69,7 +62,6 @@ export const getUltimoConcurso = async () => {
 
     return data;
   } catch (error) {
-    console.error("Erro na API, tentando recuperar cache antigo...", error);
     const fallback = localStorage.getItem(CACHE_KEY);
     if (fallback) return JSON.parse(fallback);
     throw error;
