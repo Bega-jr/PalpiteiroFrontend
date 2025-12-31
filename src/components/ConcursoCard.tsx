@@ -1,14 +1,12 @@
 interface ConcursoCardProps {
   concurso: number;
   data: string;
-  dezenas: number[];  // Sempre array de números (vamos montar no Home.tsx)
+  dezenas: number[];
 }
 
 export function ConcursoCard({ concurso, data, dezenas }: ConcursoCardProps) {
-  // Ordena as dezenas (por segurança, caso venham desordenadas)
   const sortedDezenas = [...dezenas].sort((a, b) => a - b);
 
-  // Formata a data para pt-BR (ex: 29/12/2025)
   const dataFormatada = data
     ? new Date(data).toLocaleDateString("pt-BR", {
         day: "2-digit",
@@ -39,16 +37,11 @@ export function ConcursoCard({ concurso, data, dezenas }: ConcursoCardProps) {
             </div>
           ))
         ) : (
-          <span className="text-muted-foreground text-center col-span-full">
+          <span className="text-muted-foreground">
             Dezenas indisponíveis
           </span>
         )}
       </div>
-
-      {/* Opcional: se quiser mostrar acumulado ou estimativa no futuro */}
-      {/* <div className="mt-4 text-center text-sm text-muted-foreground">
-        Acumulado para o próximo: R$ 6.000.000,00
-      </div> */}
     </div>
   );
 }
