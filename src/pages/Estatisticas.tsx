@@ -32,6 +32,7 @@ export default function Estatisticas() {
   const { data: estatisticas, isLoading } = useQuery({
     queryKey: ["estatisticasScore"],
     queryFn: async () => {
+      // ENDPOINT CORRETO PARA ESTATÍSTICAS GERAIS
       const response = await api.get("/estatisticas/base");
       return response.data;
     },
@@ -46,7 +47,7 @@ export default function Estatisticas() {
     return (
       <Layout>
         <section className="bg-primary text-primary-foreground py-12 md:py-16">
-          <div className="container px-4 text-center md:text-left">
+          <div className="container px-4">
             <h1 className="text-3xl md:text-4xl font-bold mb-4">Estatísticas</h1>
             <p className="opacity-80">Carregando análise técnica...</p>
           </div>
@@ -58,6 +59,7 @@ export default function Estatisticas() {
     );
   }
 
+  // Fallbacks e Limpeza de Dados (Proteção contra toFixed em null/undefined)
   const stats = estatisticas?.estatisticas || [];
   const ciclo = estatisticas?.ciclo || { faltam: [], total_faltam: 0 };
   const analise = estatisticas?.analise || { 
@@ -133,7 +135,7 @@ export default function Estatisticas() {
           </Card>
         )}
 
-        {/* Gráfico de Frequência - CORRIGIDO radius={} */}
+        {/* Gráfico de Frequência */}
         <Card className="border-none shadow-md overflow-hidden">
           <CardHeader className="bg-muted/30 border-b">
             <CardTitle className="flex items-center gap-2 text-md">
@@ -150,7 +152,6 @@ export default function Estatisticas() {
                     cursor={{ fill: 'transparent' }} 
                     content={<ChartTooltipContent />} 
                   />
-                  {/* Linha 160 corrigida: adicionado valor ao radius */}
                   <Bar dataKey="frequencia" radius={[4, 4, 0, 0]}> 
                     {chartData.map((entry, index) => (
                       <Cell
@@ -212,3 +213,4 @@ export default function Estatisticas() {
     </Layout>
   );
 }
+
