@@ -1,17 +1,22 @@
 import axios from "axios";
 
-// URL base sem barra final
 const API_URL = (import.meta.env.VITE_API_URL || "https://palpiteiro-backend.vercel.app").replace(/\/$/, "");
 
 export const api = axios.create({
-  baseURL: API_URL + "/",  // Adiciona uma única barra no final
+  baseURL: API_URL + "/",
   timeout: 15000,
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-// Chamadas com barra inicial (padrão)
+// Adicionada a função que estava faltando
+export const getEstatisticasScore = async () => {
+  const resp = await api.get("/estatisticas/base");
+  console.log("DEBUG Estatísticas:", resp.data);
+  return resp.data;
+};
+
 export const getPalpiteFixo = async () => {
   const resp = await api.get("/palpites/fixo");
   console.log("DEBUG Palpite Fixo:", resp.data);
@@ -47,3 +52,4 @@ export const postSalvarPalpite = async (numeros: number[]) => {
 };
 
 export default api;
+
