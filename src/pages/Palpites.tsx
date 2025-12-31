@@ -21,6 +21,8 @@ export default function Palpites() {
   } = useQuery({
     queryKey: ["palpite-fixo", refreshKey],
     queryFn: getPalpiteFixo,
+    refetchOnWindowFocus: false, // Não recarrega ao voltar para a página
+    staleTime: 1000 * 60 * 15, // Cache de 15 minutos
   });
 
   const numerosFixo = palpiteFixoData?.numeros || [];
@@ -33,6 +35,8 @@ export default function Palpites() {
   } = useQuery({
     queryKey: ["palpites-estatisticos", refreshKey],
     queryFn: getPalpitesEstatisticos,
+    refetchOnWindowFocus: false, // Não recarrega ao voltar para a página
+    staleTime: 1000 * 60 * 15, // Cache de 15 minutos
   });
 
   const palpites = palpitesData?.palpites || [];
@@ -41,14 +45,14 @@ export default function Palpites() {
     setRefreshKey((prev) => prev + 1);
     toast({
       title: "Palpites atualizados!",
-      description: "Novos palpites gerados com sucesso.",
+      description: "Novos palpites gerados com sucesso para o sorteio de hoje.",
     });
   };
 
   const handleSave = () => {
     toast({
       title: "Login necessário",
-      description: "Faça login para salvar seus palpites.",
+      description: "Faça login para salvar seus palpites favoritos.",
       variant: "destructive",
     });
   };
@@ -59,7 +63,7 @@ export default function Palpites() {
         <div className="container max-w-2xl">
           <h1 className="text-3xl font-bold mb-4">Palpites Estatísticos</h1>
           <p className="text-white/80">
-            Palpites gerados por algoritmo estatístico da Lotofácil. Dados atualizados para o concurso de hoje.
+            Palpites gerados por algoritmo inteligente com base em estatísticas reais da Lotofácil. Atualizado para o concurso de hoje.
           </p>
         </div>
       </section>
@@ -68,11 +72,11 @@ export default function Palpites() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Info className="h-4 w-4" />
-            Gerar novos palpites agora
+            Clique em atualizar para gerar novos palpites
           </div>
           <Button onClick={handleRefresh} variant="outline">
             <RefreshCw className="mr-2 h-4 w-4" />
-            Atualizar
+            Atualizar Palpites
           </Button>
         </div>
 
@@ -80,12 +84,18 @@ export default function Palpites() {
         <section>
           <div className="flex items-center gap-2 mb-4">
             <Star className="h-5 w-5 text-yellow-400" />
-            <h2 className="text-xl font-bold">Palpite Fixo</h2>
+            <h2 className="text-xl font-bold">Palpite Fixo do Dia</h2>
             <Badge variant="default">Destaque</Badge>
           </div>
 
           {loadingFixo ? (
             <LoadingCard />
+          ) : errorFixo ? (
+            <div className="p-6 border rounded-lg bg-destructive/10 text-center">
+              <p className="text-destructive text-sm">
+                Erro ao carregar o palpite fixo. Tente atualizar.
+              </p>
+            </div>
           ) : numerosFixo.length === 15 ? (
             <PalpiteCard
               numeros={numerosFixo}
@@ -108,6 +118,7 @@ export default function Palpites() {
           <div className="flex items-center gap-2 mb-4">
             <Clover className="h-5 w-5 text-primary" />
             <h2 className="text-xl font-bold">Palpites Estatísticos</h2>
+            <Badge variant="secondary">{palpites.length} palpites gerados</Badge>
           </div>
 
           {loadingEstatisticos ? (
@@ -119,7 +130,7 @@ export default function Palpites() {
           ) : errorEstatisticos ? (
             <div className="p-6 border rounded-lg bg-destructive/10 text-center">
               <p className="text-destructive">
-                Erro ao carregar palpites estatísticos. Tente atualizar.
+                Erro ao carregar palpites estatísticos. Verifique sua conexão e tente atualizar.
               </p>
             </div>
           ) : palpites.length > 0 ? (
@@ -139,7 +150,7 @@ export default function Palpites() {
           ) : (
             <div className="p-6 border rounded-lg bg-muted/20 text-center">
               <p className="text-muted-foreground text-sm">
-                Nenhum palpite estatístico disponível. Tente atualizar.
+                Nenhum palpite estatístico disponível no momento. Clique em atualizar para gerar novos.
               </p>
             </div>
           )}
