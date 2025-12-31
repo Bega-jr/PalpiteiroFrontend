@@ -5,7 +5,7 @@ import { LoadingCard } from "@/components/LoadingStates";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { api } from "@/lib/api"; // Mantendo seu padrão de importação
+import { api } from "@/lib/api"; // Importa suas funções tipadas
 import { Clover, RefreshCw, Star, Info } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -34,7 +34,7 @@ export default function Palpites() {
     queryFn: () => api.getPalpitesEstatisticos(),
   });
 
-  // Extração segura dos números do Palpite Fixo (Ajustado para funcionar)
+  // Extração segura dos números do Palpite Fixo (Ajustado para funcionar com 'numeros' ou 'palpite')
   const numerosFixo = palpiteFixoData?.numeros || palpiteFixoData?.palpite || [];
   const scoreFixo = palpiteFixoData?.score_medio || 0;
 
@@ -88,7 +88,7 @@ export default function Palpites() {
           <div className="flex items-center gap-2 mb-4">
             <Star className="h-5 w-5 text-lottery-gold fill-lottery-gold" />
             <h2 className="font-display text-xl font-bold">Palpite Fixo do Dia</h2>
-            <Badge variant="secondary" className="bg-amber-100 text-amber-700">Destaque</Badge>
+            <Badge variant="secondary" className="bg-amber-100 text-amber-700 border-amber-200">Destaque</Badge>
           </div>
           {loadingFixo ? (
             <LoadingCard />
@@ -120,14 +120,28 @@ export default function Palpites() {
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                {Object.entries({
-                  "Soma": `${palpitesEstatisticos.filtros_aplicados.soma_range[0]}-${palpitesEstatisticos.filtros_aplicados.soma_range[1]}`,
-                  "Pares": `${palpitesEstatisticos.filtros_aplicados.pares_range[0]}-${palpitesEstatisticos.filtros_aplicados.pares_range[1]}`,
-                  "Primos": `${palpitesEstatisticos.filtros_aplicados.primos_range[0]}-${palpitesEstatisticos.filtros_aplicados.primos_range[1]}`,
-                  "Moldura": `${palpitesEstatisticos.filtros_aplicados.moldura_range[0]}-${palpitesEstatisticos.filtros_aplicados.moldura_range[1]}`,
-                }).map(([label, value]) => (
-                  <Badge key={label} variant="outline" className="bg-white">{label}: {value}</Badge>
-                ))}
+                <Badge variant="outline" className="bg-white">
+                  Soma: {palpitesEstatisticos.filtros_aplicados.soma_range[0]}-
+                  {palpitesEstatisticos.filtros_aplicados.soma_range[1]}
+                </Badge>
+                <Badge variant="outline" className="bg-white">
+                  Pares: {palpitesEstatisticos.filtros_aplicados.pares_range[0]}-
+                  {palpitesEstatisticos.filtros_aplicados.pares_range[1]}
+                </Badge>
+                <Badge variant="outline" className="bg-white">
+                  Primos: {palpitesEstatisticos.filtros_aplicados.primos_range[0]}-
+                  {palpitesEstatisticos.filtros_aplicados.primos_range[1]}
+                </Badge>
+                <Badge variant="outline" className="bg-white">
+                  Moldura: {palpitesEstatisticos.filtros_aplicados.moldura_range[0]}-
+                  {palpitesEstatisticos.filtros_aplicados.moldura_range[1]}
+                </Badge>
+                <Badge variant="outline" className="bg-white">
+                  Repetidos: {palpitesEstatisticos.filtros_aplicados.max_repetidos}
+                </Badge>
+                <Badge variant="outline" className="bg-white">
+                  Seq. Máx: {palpitesEstatisticos.filtros_aplicados.max_sequencia}
+                </Badge>
                 <Badge className="bg-primary/10 text-primary border-primary/20">
                   Score Mín: {palpitesEstatisticos.filtros_aplicados.score_minimo}
                 </Badge>
@@ -165,7 +179,7 @@ export default function Palpites() {
           ) : (
             <Card className="border-none bg-muted/10">
               <CardContent className="p-10 text-center text-muted-foreground italic">
-                Não foi possível processar os palpites estatísticos no momento.
+                Não foi possível processar os palpites estatísticos no momento. Tente atualizar a página.
               </CardContent>
             </Card>
           )}
