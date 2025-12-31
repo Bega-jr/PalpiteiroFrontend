@@ -9,10 +9,9 @@ import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { 
   History, Lock, LogIn, TrendingUp, 
-  DollarSign, Target, Trophy, ChartBar 
+  Target, Trophy, ChartBar 
 } from "lucide-react";
 
-// Tipagem para os dados do Supabase
 interface Palpite {
   id: string;
   created_at: string;
@@ -36,7 +35,7 @@ export default function Historico() {
 
   const user = session?.user;
 
-  // 2. Busca de Palpites Reais
+  // 2. Busca de Palpites
   const { data: palpites = [], isLoading: isLoadingPalpites } = useQuery({
     queryKey: ["palpites-usuario", user?.id],
     queryFn: async () => {
@@ -49,83 +48,75 @@ export default function Historico() {
       if (error) {
         toast({
           title: "Erro ao carregar",
-          description: "Não foi possível sincronizar seus palpites.",
+          description: "Não foi possível carregar seu histórico.",
           variant: "destructive",
         });
         throw error;
       }
-      return data as Palpite[];
+      return (data || []) as Palpite[];
     },
     enabled: !!user,
   });
 
-    // 3. Cálculos de Estatísticas (Com verificações de segurança)
+  // 3. Cálculos de Estatísticas com Proteção Anti-Erro (Fixed)
   const totalJogos = palpites?.length || 0;
   
   const totalAcertos = palpites?.reduce((acc, p) => {
-    // Garante que p.acertos seja um número antes de somar
-    const acertos = typeof p.acertos === 'number' ? p.acertos : 0;
-    return acc + acertos;
+    const valorAcertos = Number(p.acertos) || 0;
+    return acc + valorAcertos;
   }, 0) || 0;
 
+  // Garantia de que a média nunca tente ler de nulo
   const mediaAcertos = totalJogos > 0 
     ? (totalAcertos / totalJogos).toFixed(1) 
     : "0.0";
 
-  const stats = {
-    total: totalJogos,
-    totalAcertos: totalAcertos,
-    mediaAcertos: mediaAcertos
-  };
-
-
-  // ESTADO: Carregando Sessão
+  // ESTADO: Carregando (Inicial)
   if (isLoadingSession) {
     return (
       <Layout>
         <div className="container py-20 text-center">
-          <Skeleton className="h-12 w-48 mx-auto mb-4" />
-          <p>Verificando autenticação...</p>
+          <p className="animate-pulse">Verificando acesso...</p>
         </div>
       </Layout>
     );
   }
 
-  // ESTADO: Não Autenticado (Visual do Código 2)
+  // ESTADO: Não Autenticado
   if (!user) {
     return (
       <Layout>
-        <section className="bg-primary text-primary-foreground py-12 md:py-16">
-          <div className="container">
-            <h1 className="text-3xl md:text-4xl font-bold mb-4">Meu Histórico</h1>
-            <p className="opacity-90">Acompanhe seus palpites salvos e evolução.</p>
+        <section className="bg-primary text-primary-foreground py-12">
+          <div className="container text-center md:text-left">
+            <h1 className="text-3xl font-bold mb-2">Meu Histórico</h1>
+            <p className="opacity-90 text-sm">Entre para ver seus jogos salvos.</p>
           </div>
         </section>
 
         <div className="container py-12">
           <Card className="max-w-lg mx-auto">
-            <CardHeader className="text-center">
-              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                <Lock className="h-8 w-8 text-muted-foreground" />
+            <CardHeader className="text-center border-b mb-6 bg-muted/20">
+              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-2">
+                <Lock className="h-6 w-6 text-primary" />
               </div>
-              <CardTitle className="text-2xl font-bold">Acesso Restrito</CardTitle>
+              <CardTitle>Acesso Restrito</CardTitle>
             </CardHeader>
             <CardContent className="text-center space-y-6">
               <p className="text-muted-foreground">
-                Faça login para salvar seus palpites e visualizar estatísticas de desempenho.
+                Conecte-se para salvar seus palpites e conferir seus acertos automaticamente.
               </p>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="p-3 border rounded-lg flex flex-col items-center">
-                  <History className="h-5 w-5 text-primary mb-2" />
-                  <span>Histórico</span>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 border rounded-lg">
+                  <Target className="h-5 w-5 text-primary mx-auto mb-2" />
+                  <span className="text-xs font-medium">Conferência</span>
                 </div>
-                <div className="p-3 border rounded-lg flex flex-col items-center">
-                  <Target className="h-5 w-5 text-primary mb-2" />
-                  <span>Conferência</span>
+                <div className="p-4 border rounded-lg">
+                  <TrendingUp className="h-5 w-5 text-primary mx-auto mb-2" />
+                  <span className="text-xs font-medium">Estatísticas</span>
                 </div>
               </div>
               <Button asChild className="w-full">
-                <Link to="/auth"><LogIn className="mr-2 h-4 w-4" /> Entrar agora</Link>
+                <Link to="/auth"><LogIn className="mr-2 h-4 w-4" /> Entrar ou Criar Conta</Link>
               </Button>
             </CardContent>
           </Card>
@@ -134,117 +125,76 @@ export default function Historico() {
     );
   }
 
-  // ESTADO: Autenticado e Com Dados
+  // ESTADO: Autenticado
   return (
     <Layout>
       <section className="bg-primary text-primary-foreground py-12">
         <div className="container">
-          <h1 className="text-3xl font-bold mb-2">Seu Painel de Palpites</h1>
-          <p className="opacity-80 text-sm">Gerencie e analise seu histórico de jogos salvos.</p>
+          <h1 className="text-3xl font-bold mb-2">Seu Histórico</h1>
+          <p className="opacity-80 text-sm italic">Última atualização em 2025</p>
         </div>
       </section>
 
       <div className="container py-8 space-y-8">
-        {/* Resumo Estatístico Real */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        {/* Painel de Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card>
             <CardContent className="p-6 flex items-center gap-4">
-              <div className="p-3 bg-blue-100 rounded-full text-blue-600">
-                <History className="h-6 w-6" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Salvo</p>
-                <p className="text-2xl font-bold">{stats.total} jogos</p>
-              </div>
+              <div className="p-2 bg-primary/10 rounded-lg"><History className="text-primary h-5 w-5" /></div>
+              <div><p className="text-xs text-muted-foreground">Total Salvo</p><p className="text-xl font-bold">{totalJogos}</p></div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-6 flex items-center gap-4">
-              <div className="p-3 bg-green-100 rounded-full text-green-600">
-                <Trophy className="h-6 w-6" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Acertos</p>
-                <p className="text-2xl font-bold">{stats.totalAcertos}</p>
-              </div>
+              <div className="p-2 bg-green-100 rounded-lg"><Trophy className="text-green-600 h-5 w-5" /></div>
+              <div><p className="text-xs text-muted-foreground">Acertos Totais</p><p className="text-xl font-bold">{totalAcertos}</p></div>
             </CardContent>
           </Card>
-          <Card className="hidden md:block">
+          <Card>
             <CardContent className="p-6 flex items-center gap-4">
-              <div className="p-3 bg-purple-100 rounded-full text-purple-600">
-                <ChartBar className="h-6 w-6" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Média p/ Jogo</p>
-                <p className="text-2xl font-bold">{stats.mediaAcertos}</p>
-              </div>
+              <div className="p-2 bg-blue-100 rounded-lg"><ChartBar className="text-blue-600 h-5 w-5" /></div>
+              <div><p className="text-xs text-muted-foreground">Média p/ Jogo</p><p className="text-xl font-bold">{mediaAcertos}</p></div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Lista de Palpites */}
+        {/* Lista Principal */}
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold flex items-center gap-2">
-              <History className="h-5 w-5 text-primary" />
-              Últimos Jogos
-            </h2>
-            {palpites.length > 0 && (
-               <Button variant="outline" size="sm" asChild>
-                  <Link to="/palpites">Gerar Novo</Link>
-               </Button>
-            )}
-          </div>
-
+          <h2 className="text-lg font-bold">Jogos Registrados</h2>
+          
           {isLoadingPalpites ? (
             <div className="space-y-4">
-              {[1, 2, 3].map((i) => <Skeleton key={i} className="h-32 w-full" />)}
+              {[1, 2, 3].map((i) => <Skeleton key={i} className="h-32 w-full rounded-xl" />)}
             </div>
           ) : palpites.length === 0 ? (
-            <Card className="border-dashed">
-              <CardContent className="py-16 text-center">
-                <History className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-20" />
-                <p className="text-muted-foreground mb-6">Nenhum palpite encontrado na sua conta.</p>
-                <Button asChild>
-                  <Link to="/palpites">Começar a Gerar</Link>
-                </Button>
-              </CardContent>
+            <Card className="border-dashed py-16 text-center">
+              <History className="h-10 w-10 mx-auto mb-4 opacity-20" />
+              <p className="text-muted-foreground mb-4">Sua lista está vazia.</p>
+              <Button asChild variant="outline">
+                <Link to="/palpites">Gerar Meus Primeiros Números</Link>
+              </Button>
             </Card>
           ) : (
-            <div className="grid gap-6">
+            <div className="grid gap-4">
               {palpites.map((palpite) => (
-                <Card key={palpite.id} className="overflow-hidden hover:border-primary transition-colors">
-                  <CardContent className="p-0">
-                    <div className="bg-muted/30 p-3 border-b flex justify-between items-center">
-                      <span className="text-xs font-medium text-muted-foreground">
-                        {new Date(palpite.created_at).toLocaleDateString("pt-BR", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit"
-                        })}
-                      </span>
-                      {palpite.acertos !== undefined && (
-                        <span className="bg-primary/10 text-primary text-[10px] uppercase font-bold px-2 py-0.5 rounded-full">
-                          Conferido
-                        </span>
-                      )}
-                    </div>
-                    <div className="p-6">
-                      <PalpiteCard
-                        numeros={palpite.numeros}
-                        scoreMedio={palpite.score_medio}
-                        metricas={palpite.metricas}
-                        showSaveButton={false}
-                      />
-                      {palpite.acertos !== undefined && (
-                        <div className="mt-4 flex items-center gap-2 text-primary font-bold">
-                          <Trophy className="h-4 w-4" />
-                          <span>{palpite.acertos} números acertados</span>
-                        </div>
-                      )}
-                    </div>
+                <Card key={palpite.id} className="hover:shadow-sm transition-shadow">
+                  <div className="bg-muted/30 px-6 py-2 border-b flex justify-between items-center text-[10px] text-muted-foreground font-mono uppercase tracking-widest">
+                    <span>ID: {palpite.id.split('-')[0]}</span>
+                    <span>{new Date(palpite.created_at).toLocaleString('pt-BR')}</span>
+                  </div>
+                  <CardContent className="p-6">
+                    <PalpiteCard
+                      numeros={palpite.numeros}
+                      scoreMedio={palpite.score_medio}
+                      metricas={palpite.metricas}
+                      showSaveButton={false}
+                    />
+                    {typeof palpite.acertos === 'number' && (
+                      <div className="mt-4 pt-4 border-t flex items-center gap-2 text-primary font-bold">
+                        <Trophy className="h-4 w-4" />
+                        <span>{palpite.acertos} Acertos nesta combinação</span>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))}
