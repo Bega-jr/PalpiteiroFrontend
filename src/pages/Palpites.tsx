@@ -8,6 +8,7 @@ import { Clover, RefreshCw, Star, Info } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { getPalpiteFixo, getPalpitesEstatisticos } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 
 export default function Palpites() {
   const { toast } = useToast();
@@ -21,8 +22,8 @@ export default function Palpites() {
   } = useQuery({
     queryKey: ["palpite-fixo", refreshKey],
     queryFn: getPalpiteFixo,
-    refetchOnWindowFocus: false, // Não recarrega ao voltar para a página
-    staleTime: 1000 * 60 * 15, // Cache de 15 minutos
+    refetchOnWindowFocus: false,
+    staleTime: 1000 * 60 * 15,
   });
 
   const numerosFixo = palpiteFixoData?.numeros || [];
@@ -35,8 +36,8 @@ export default function Palpites() {
   } = useQuery({
     queryKey: ["palpites-estatisticos", refreshKey],
     queryFn: getPalpitesEstatisticos,
-    refetchOnWindowFocus: false, // Não recarrega ao voltar para a página
-    staleTime: 1000 * 60 * 15, // Cache de 15 minutos
+    refetchOnWindowFocus: false,
+    staleTime: 1000 * 60 * 15,
   });
 
   const palpites = palpitesData?.palpites || [];
@@ -49,12 +50,39 @@ export default function Palpites() {
     });
   };
 
-  const handleSave = () => {
-    toast({
-      title: "Login necessário",
-      description: "Faça login para salvar seus palpites favoritos.",
-      variant: "destructive",
+  // Função de salvar palpite (fixo ou estatístico)
+  const handleSavePalpite = async (numeros: number[], tipo: "fixo" | "estatistico" = "estatistico") => {
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session) {
+      toast({
+        title: "Login necessário",
+        description: "Faça login para salvar seus palpites.",
+        variant: "destructive",
+      });
+      window.location.href = "/auth";
+      return;
+    }
+
+    const { error } = await supabase.from("palpites").insert({
+      user_id: session.user.id,
+      tipo,
+      numeros: numeros.sort((a, b) => a - b), // Salva ordenado
+      created_at: new Date().toISOString(),
     });
+
+    if (error) {
+      toast({
+        title: "Erro ao salvar",
+        description: error.message || "Tente novamente.",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Palpite salvo!",
+        description: "Adicionado ao seu histórico com sucesso.",
+      });
+    }
   };
 
   return (
@@ -102,7 +130,7 @@ export default function Palpites() {
               scoreMedio={undefined}
               highlight
               showSaveButton
-              onSave={handleSave}
+              onSave={() => handleSavePalpite(numerosFixo, "fixo")}
             />
           ) : (
             <div className="p-6 border rounded-lg bg-muted/20 text-center">
@@ -130,7 +158,7 @@ export default function Palpites() {
           ) : errorEstatisticos ? (
             <div className="p-6 border rounded-lg bg-destructive/10 text-center">
               <p className="text-destructive">
-                Erro ao carregar palpites estatísticos. Verifique sua conexão e tente atualizar.
+                Erro ao carregar palpites estatísticos. Tente atualizar.
               </p>
             </div>
           ) : palpites.length > 0 ? (
@@ -143,7 +171,7 @@ export default function Palpites() {
                   scoreMedio={palpite.score_medio}
                   metricas={palpite.estatistica?.metricas}
                   showSaveButton
-                  onSave={handleSave}
+                  onSave={() => handleSavePalpite(palpite.numeros, "estatistico")}
                 />
               ))}
             </div>
