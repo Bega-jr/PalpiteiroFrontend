@@ -37,6 +37,9 @@ export default function Estatisticas() {
     },
   });
 
+  // >>> DEBUG: VERIFIQUE ISTO NO CONSOLE DO NAVEGADOR (F12) <<<
+  console.log("DEBUG Estatísticas (Objeto Completo):", estatisticas);
+
   // 1. Configuração do Gráfico (Essencial para o ChartContainer)
   const chartConfig = {
     frequencia: { label: "Frequência", color: "hsl(var(--primary))" },
@@ -59,10 +62,15 @@ export default function Estatisticas() {
     );
   }
 
-  // Fallbacks e Limpeza de Dados (Proteção contra toFixed em null)
+  // Fallbacks e Limpeza de Dados (Proteção contra toFixed em null/undefined)
   const stats = estatisticas?.estatisticas || [];
   const ciclo = estatisticas?.ciclo || { faltam: [], total_faltam: 0 };
-  const analise = estatisticas?.analise || { soma_media: 0, pares_media: 0, impares_media: 0, primos_media: 0 };
+  const analise = estatisticas?.analise || { 
+    soma_media: 0, 
+    pares_media: 0, 
+    impares_media: 0, 
+    primos_media: 0 
+  };
 
   const sortedByScore = [...stats].sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0));
   const top10Ids = new Set(sortedByScore.slice(0, 10).map(s => s.numero));
@@ -104,7 +112,10 @@ export default function Estatisticas() {
                 <div className="flex items-center gap-2 text-muted-foreground text-[10px] mb-2 uppercase font-black tracking-widest">
                   <item.icon className="h-3 w-3 text-primary" /> {item.label}
                 </div>
-                <div className="text-2xl font-black">{Number(item.val || 0).toFixed(1)}</div>
+                <div className="text-2xl font-black">
+                  {/* Garantia de que o valor é numérico antes de formatar */}
+                  {Number(item.val || 0).toFixed(1)}
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -117,7 +128,7 @@ export default function Estatisticas() {
               <CardTitle className="flex items-center gap-2 text-amber-900">
                 <Clock className="h-5 w-5" />
                 Faltam para fechar o Ciclo
-                <Badge className="bg-amber-600 ml-auto">{ciclo.total_faltam} números</Badge>
+                <Badge className="bg-amber-600 ml-auto">{ciclo.total_faltam} restantes</Badge>
               </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-3 pb-6">
@@ -136,16 +147,17 @@ export default function Estatisticas() {
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-8">
+            {/* O ChartContainer DEVE envolver todo o gráfico para o Tooltip funcionar */}
             <ChartContainer config={chartConfig} className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData}>
                   <XAxis dataKey="numero" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-                  <YAxis hide />
+                  <YAxis axisLine={false} tickLine={false} hide />
                   <ChartTooltip 
                     cursor={{ fill: 'transparent' }} 
                     content={<ChartTooltipContent />} 
                   />
-                  <Bar dataKey="frequencia" radius={[4, 4, 0, 0]}>
+                  <Bar dataKey="frequencia" radius={}>
                     {chartData.map((entry, index) => (
                       <Cell
                         key={`cell-${index}`}
@@ -170,7 +182,7 @@ export default function Estatisticas() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-20 text-center">Nº</TableHead>
+                  <TableHead className="w-24 text-center">Dezena</TableHead>
                   <TableHead>Score Estatístico</TableHead>
                   <TableHead className="text-center">Atraso</TableHead>
                   <TableHead className="text-right">Frequência</TableHead>
@@ -186,6 +198,7 @@ export default function Estatisticas() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2 font-bold">
+                        {/* Garantia de que o score é numérico */}
                         {Number(s.score || 0).toFixed(0)}
                         {top10Ids.has(s.numero) && <Badge variant="secondary" className="text-[9px] h-4">QUENTE</Badge>}
                       </div>
