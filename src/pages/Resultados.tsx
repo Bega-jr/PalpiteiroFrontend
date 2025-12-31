@@ -1,132 +1,145 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Layout } from "@/components/Layout";
 import { ConcursoCard } from "@/components/ConcursoCard";
-import { LoadingCard } from "@/components/LoadingStates";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { LoadingList } from "@/components/LoadingStates";
 import { Card, CardContent } from "@/components/ui/card";
-import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
+import { Trophy, Search, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
 
 export default function Resultados() {
-  const { toast } = useToast();
-  const [buscaNumero, setBuscaNumero] = useState("");
-  const [concursoBuscado, setConcursoBuscado] = useState<number | null>(null);
+  const [searchConcurso, setSearchConcurso] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
-  // Últimos 10 concursos
-  const { data: ultimosData = {}, isLoading: loadingUltimos } = useQuery({
-    queryKey: ["ultimos-concursos"],
-    queryFn: async () => {
-      const resp = await api.get("/ultimos/10");
-      return resp.data; // {status, quantidade, concursos: [...]}
-    },
-    staleTime: 1000 * 60 * 30, // 30 minutos de cache
-    refetchOnWindowFocus: false,
+  const { data: ultimosConcursos, isLoading: loadingLista, error: errorLista } = useQuery({
+    queryKey: ["ultimosConcursos", 50],
+    queryFn: () => api.getUltimosConcursos(50),
+    staleTime: 1000 * 60 * 30 // Cache por 30 minutos
   });
 
-  const ultimosConcursos = ultimosData.concursos || [];
-
-  // Concurso específico pela busca
-  const { data: concursoEspecifico, isLoading: loadingEspecifico } = useQuery({
-    queryKey: ["concurso-especifico", concursoBuscado],
-    queryFn: async () => {
-      const resp = await api.get(`/concurso/${concursoBuscado}`);
-      return resp.data.concurso;
-    },
-    enabled: !!concursoBuscado,
-    staleTime: 1000 * 60 * 60, // 1 hora de cache
+  const { data: concursoBuscado, isLoading: loadingBusca, error: errorBusca } = useQuery({
+    queryKey: ["concurso", searchConcurso],
+    queryFn: () => api.getConcurso(parseInt(searchConcurso)),
+    enabled: searchConcurso.length > 0 && !isNaN(parseInt(searchConcurso)),
   });
 
-  const handleBusca = () => {
-    const num = parseInt(buscaNumero.trim());
-    if (!isNaN(num) && num > 0) {
-      setConcursoBuscado(num);
-    } else {
-      toast({
-        title: "Número inválido",
-        description: "Digite um número de concurso válido.",
-        variant: "destructive",
-      });
-    }
+  // Garante que 'concursos' seja sempre um array para evitar erros de map()
+  const concursos = ultimosConcursos || []; 
+  const totalPages = Math.ceil(concursos.length / itemsPerPage);
+  const paginatedConcursos = concursos.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
   };
-
-  const handleLimparBusca = () => {
-    setConcursoBuscado(null);
-    setBuscaNumero("");
-  };
-
-  // Decide o que exibir
-  const concursosExibidos = concursoEspecifico ? [concursoEspecifico] : ultimosConcursos;
-
-  // Monta o array de dezenas a partir de bola1 até bola15
-  const montarDezenas = (concurso: any) => [
-    Number(concurso.bola1),
-    Number(concurso.bola2),
-    Number(concurso.bola3),
-    Number(concurso.bola4),
-    Number(concurso.bola5),
-    Number(concurso.bola6),
-    Number(concurso.bola7),
-    Number(concurso.bola8),
-    Number(concurso.bola9),
-    Number(concurso.bola10),
-    Number(concurso.bola11),
-    Number(concurso.bola12),
-    Number(concurso.bola13),
-    Number(concurso.bola14),
-    Number(concurso.bola15),
-  ].sort((a, b) => a - b);
 
   return (
     <Layout>
-      <div className="container py-10 max-w-5xl">
-        <h1 className="text-3xl font-bold mb-8 text-center">Resultados da Lotofácil</h1>
-
-        {/* Área de busca */}
-        <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto mb-12">
-          <Input
-            type="number"
-            placeholder="Digite o número do concurso (ex: 3575)"
-            value={buscaNumero}
-            onChange={(e) => setBuscaNumero(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleBusca()}
-          />
-          <Button onClick={handleBusca}>Buscar Concurso</Button>
-          {concursoBuscado && (
-            <Button variant="outline" onClick={handleLimparBusca}>
-              Ver últimos 10
-            </Button>
-          )}
+      {/* Header Estilizado */}
+      <section className="bg-primary text-primary-foreground py-12 md:py-16">
+        <div className="container">
+          <h1 className="text-3xl md:text-5xl font-bold mb-4">Resultados Oficiais</h1>
+          <p className="text-white/80 text-lg">Dados atualizados diretamente da Caixa Econômica Federal.</p>
         </div>
+      </section>
 
-        {/* Loading ou lista */}
-        {loadingUltimos || loadingEspecifico ? (
-          <div className="grid gap-8">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <LoadingCard key={i} />
-            ))}
-          </div>
-        ) : concursosExibidos.length > 0 ? (
-          <div className="grid gap-8">
-            {concursosExibidos.map((concurso: any) => (
+      <div className="container py-8 md:py-12 space-y-8">
+        
+        {/* Busca por Concurso */}
+        <Card className="shadow-lg">
+          <CardContent className="p-6">
+            <form onSubmit={handleSearch} className="flex gap-4">
+              <div className="flex-1">
+                <Input
+                  type="number"
+                  placeholder="Buscar por número do concurso (ex: 2980)..."
+                  value={searchConcurso}
+                  onChange={(e) => setSearchConcurso(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+              <Button type="submit" disabled={!searchConcurso || loadingBusca}>
+                {loadingBusca ? 'Buscando...' : <><Search className="mr-2 h-4 w-4" /> Buscar</>}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* Resultado da Busca / Erro de Busca */}
+        {searchConcurso && (
+          <section>
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+              Resultado para o Concurso {searchConcurso}
+            </h2>
+            {loadingBusca ? (
+              <Card><CardContent className="p-6 text-center text-muted-foreground">Buscando...</CardContent></Card>
+            ) : errorBusca ? (
+                 <Card><CardContent className="p-6 text-center text-destructive flex items-center justify-center gap-2"><AlertCircle className="h-4 w-4" /> Concurso não encontrado.</CardContent></Card>
+            ) : concursoBuscado ? (
               <ConcursoCard
-                key={concurso.concurso}
-                concurso={concurso.concurso}
-                data={concurso.data}
-                dezenas={montarDezenas(concurso)}
+                concurso={concursoBuscado.concurso}
+                data={concursoBuscado.data}
+                dezenas={concursoBuscado.dezenas}
               />
-            ))}
-          </div>
-        ) : (
-          <Card>
-            <CardContent className="p-10 text-center">
-              <p className="text-muted-foreground text-lg">
-                Nenhum concurso encontrado.
-              </p>
-            </CardContent>
-          </Card>
+            ) : null}
+          </section>
         )}
+
+        {/* Lista de Concursos */}
+        <section>
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-primary" />
+            Últimos Resultados da Lista
+          </h2>
+
+          {loadingLista ? (
+            <LoadingList />
+          ) : errorLista ? (
+             <Card><CardContent className="p-6 text-center text-destructive flex items-center justify-center gap-2"><AlertCircle className="h-4 w-4" /> Erro ao carregar a lista de concursos.</CardContent></Card>
+          ) : (
+            <>
+              <div className="space-y-4">
+                {paginatedConcursos.map((concurso) => (
+                  <ConcursoCard
+                    key={concurso.concurso}
+                    concurso={concurso.concurso}
+                    data={concurso.data}
+                    dezenas={concurso.dezenas}
+                    compact
+                  />
+                ))}
+              </div>
+
+              {/* Paginação */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-4 mt-8">
+                  <Button
+                    variant="outline"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" /> Anterior
+                  </Button>
+                  <span className="text-sm font-medium">
+                    Página {currentPage} de {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    Próxima <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </section>
       </div>
     </Layout>
   );
