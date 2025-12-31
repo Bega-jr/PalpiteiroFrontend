@@ -11,12 +11,11 @@ import Historico from "./pages/Historico";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
-// Configuração de Retry para ajudar com instabilidades de rede
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 1, 
-      refetchOnWindowFocus: false,
+      retry: 2, // Tenta 2 vezes antes de mostrar erro
+      staleTime: 1000 * 60 * 5, // 5 minutos
     },
   },
 });
