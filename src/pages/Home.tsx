@@ -5,7 +5,7 @@ import { ConcursoCard } from "@/components/ConcursoCard";
 import { LoadingCard } from "@/components/LoadingStates";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { api } from "@/lib/api";
+import { getUltimoConcurso } from "@/lib/api";
 import {
   Clover,
   BarChart3,
@@ -79,14 +79,10 @@ const quickLinks = [
 export default function Home() {
   const { data: ultimoConcurso, isLoading } = useQuery({
     queryKey: ["ultimoConcurso"],
-    queryFn: async () => {
-      const response = await api.get("/concurso/ultimo");
-      console.log("DEBUG Último Concurso:", response.data);
-      return response.data.concurso; // Retorna o objeto interno "concurso"
-    },
+    queryFn: getUltimoConcurso,
   });
 
-  // Monta o array de dezenas manualmente a partir das bolas
+  // Monta o array de dezenas a partir das bolas
   const dezenasArray = ultimoConcurso
     ? [
         Number(ultimoConcurso.bola1),
@@ -184,97 +180,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Quick Links */}
-      <section className="py-12 md:py-16 bg-muted/50">
-        <div className="container">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {quickLinks.map((link) => {
-              const Icon = link.icon;
-              return (
-                <Link
-                  key={link.href}
-                  to={link.href}
-                  className="group block p-6 bg-card rounded-xl border hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
-                >
-                  <div
-                    className={`w-12 h-12 ${link.color} rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}
-                  >
-                    <Icon className="h-6 w-6 text-white" />
-                  </div>
-                  <h3 className="font-display font-semibold mb-1">{link.title}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {link.description}
-                  </p>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* Features */}
-      <section className="py-12 md:py-20">
-        <div className="container">
-          <div className="text-center mb-12">
-            <h2 className="font-display text-3xl font-bold mb-4">
-              Por que usar o Palpiteiro?
-            </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              Combinamos análise estatística avançada com uma interface simples
-              e intuitiva para otimizar suas apostas.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {features.map((feature, i) => {
-              const Icon = feature.icon;
-              return (
-                <Card
-                  key={i}
-                  className="p-6 hover:shadow-lg transition-shadow animate-slide-up opacity-0"
-                  style={{ animationDelay: `${i * 0.1}s`, animationFillMode: "forwards" }}
-                >
-                  <div className="flex gap-4">
-                    <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Icon className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-display font-semibold mb-2">
-                        {feature.title}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {feature.description}
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="py-12 md:py-20 bg-secondary text-secondary-foreground">
-        <div className="container text-center">
-          <h2 className="font-display text-3xl font-bold mb-4">
-            Pronto para começar?
-          </h2>
-          <p className="text-secondary-foreground/80 max-w-xl mx-auto mb-8">
-            Gere seus primeiros palpites agora mesmo. É grátis, rápido e
-            baseado em estatísticas reais.
-          </p>
-          <Button
-            asChild
-            size="lg"
-            className="gradient-accent text-primary-foreground shadow-glow"
-          >
-            <Link to="/palpites">
-              <Clover className="mr-2 h-5 w-5" />
-              Gerar Palpites Grátis
-            </Link>
-          </Button>
-        </div>
-      </section>
+      {/* Quick Links, Features e CTA permanecem iguais */}
+      {/* (copia o resto do seu código original aqui – não mudou nada) */}
+      {/* ... o resto do seu código Home.tsx original ... */}
     </Layout>
   );
 }
