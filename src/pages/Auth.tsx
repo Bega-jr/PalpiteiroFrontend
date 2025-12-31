@@ -23,53 +23,56 @@ export default function Auth() {
     password: "",
     confirmPassword: "",
   });
-
+  const [forgotEmail, setForgotEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!loginForm.email || !loginForm.password) {
+      toast({ title: "Erro", description: "Preencha email e senha.", variant: "destructive" });
+      return;
+    }
     setLoading(true);
-
     const { error } = await supabase.auth.signInWithPassword({
-      email: loginForm.email,
+      email: loginForm.email.trim(),
       password: loginForm.password,
     });
+    setLoading(false);
 
     if (error) {
       toast({
         title: "Erro ao entrar",
-        description: error.message,
+        description: error.message.includes("Invalid login credentials")
+          ? "Email ou senha incorretos."
+          : error.message,
         variant: "destructive",
       });
     } else {
-      toast({
-        title: "Bem-vindo de volta!",
-        description: "Login realizado com sucesso.",
-      });
+      toast({ title: "Sucesso!", description: "Login realizado com sucesso." });
       window.location.href = "/historico";
     }
-    setLoading(false);
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (signupForm.password !== signupForm.confirmPassword) {
-      toast({
-        title: "Erro",
-        description: "As senhas não coincidem.",
-        variant: "destructive",
-      });
+      toast({ title: "Erro", description: "As senhas não coincidem.", variant: "destructive" });
+      return;
+    }
+    if (!signupForm.email || !signupForm.password || !signupForm.name) {
+      toast({ title: "Erro", description: "Preencha todos os campos.", variant: "destructive" });
       return;
     }
     setLoading(true);
-
     const { error } = await supabase.auth.signUp({
-      email: signupForm.email,
+      email: signupForm.email.trim(),
       password: signupForm.password,
       options: {
-        data: { name: signupForm.name },
+        data: { name: signupForm.name.trim() },
+        emailRedirectTo: window.location.origin, // Redireciona de volta pro site após confirmar email
       },
     });
+    setLoading(false);
 
     if (error) {
       toast({
@@ -80,10 +83,34 @@ export default function Auth() {
     } else {
       toast({
         title: "Cadastro realizado!",
-        description: "Verifique seu email para confirmar a conta.",
+        description: "Verifique seu email para confirmar a conta antes de fazer login.",
       });
+      setActiveTab("login");
+      setLoginForm({ email: signupForm.email, password: "" });
     }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotEmail) {
+      toast({ title: "Erro", description: "Digite seu email.", variant: "destructive" });
+      return;
+    }
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail.trim(), {
+      redirectTo: window.location.origin + "/auth", // Volta pra página de auth após clicar no link
+    });
     setLoading(false);
+
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } else {
+      toast({
+        title: "Email enviado!",
+        description: "Verifique sua caixa de entrada para redefinir a senha.",
+      });
+      setForgotEmail("");
+    }
   };
 
   return (
@@ -112,8 +139,9 @@ export default function Auth() {
                   <TabsTrigger value="signup">Cadastrar</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="login">
-                  <form onSubmit={handleLogin} className="space-y-4">
+                {/* LOGIN */}
+                <TabsContent value="login" className="space-y-4">
+                  <form onSubmit={handleLogin}>
                     <div className="space-y-2">
                       <Label htmlFor="login-email">Email</Label>
                       <div className="relative">
@@ -146,14 +174,33 @@ export default function Auth() {
                         />
                       </div>
                     </div>
-                    <Button type="submit" className="w-full" disabled={loading}>
+                    <Button type="submit" className="w-full mt-6" disabled={loading}>
                       {loading ? "Entrando..." : "Entrar"}
                     </Button>
                   </form>
+
+                  {/* Esqueci a senha */}
+                  <form onSubmit={handleForgotPassword} className="mt-4">
+                    <Label htmlFor="forgot-email">Esqueceu a senha?</Label>
+                    <div className="flex gap-2 mt-2">
+                      <Input
+                        id="forgot-email"
+                        type="email"
+                        placeholder="seu@email.com"
+                        value={forgotEmail}
+                        onChange={(e) => setForgotEmail(e.target.value)}
+                        disabled={loading}
+                      />
+                      <Button type="submit" variant="outline" disabled={loading}>
+                        Enviar link
+                      </Button>
+                    </div>
+                  </form>
                 </TabsContent>
 
-                <TabsContent value="signup">
-                  <form onSubmit={handleSignup} className="space-y-4">
+                {/* CADASTRO */}
+                <TabsContent value="signup" className="space-y-4">
+                  <form onSubmit={handleSignup}>
                     <div className="space-y-2">
                       <Label htmlFor="signup-name">Nome</Label>
                       <div className="relative">
@@ -218,7 +265,7 @@ export default function Auth() {
                         />
                       </div>
                     </div>
-                    <Button type="submit" className="w-full" disabled={loading}>
+                    <Button type="submit" className="w-full mt-6" disabled={loading}>
                       {loading ? "Criando conta..." : "Criar Conta"}
                     </Button>
                   </form>
