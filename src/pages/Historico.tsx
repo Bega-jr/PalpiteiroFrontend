@@ -1,63 +1,84 @@
 import { useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { PalpiteCard } from "@/components/PalpiteCard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton"; // Se tiver Shadcn instalado
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 
+// 1. Definição de Interface para os dados
+interface Palpite {
+  id: string;
+  created_at: string;
+  numeros: number[];
+  score_medio?: number;
+  metricas?: any;
+  acertos?: number;
+}
+
 export default function Historico() {
   const { toast } = useToast();
+  const navigate = useNavigate();
 
-  const { data: session } = useQuery({
+  // 2. Query de Sessão (considerar mover para um contexto global no futuro)
+  const { data: sessionData, isLoading: isLoadingSession } = useQuery({
     queryKey: ["session"],
-    queryFn: async () => supabase.auth.getSession(),
+    queryFn: async () => {
+      const { data } = await supabase.auth.getSession();
+      return data.session;
+    },
   });
 
-  const user = session?.data.session?.user;
+  const user = sessionData?.user;
 
-  const { data: palpites = [], isLoading } = useQuery({
+  const { data: palpites = [], isLoading: isLoadingPalpites } = useQuery({
     queryKey: ["palpites-usuario", user?.id],
     queryFn: async () => {
-      if (!user) return [];
       const { data, error } = await supabase
         .from("historico_jogos")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", user?.id)
         .order("created_at", { ascending: false });
 
       if (error) {
         toast({
-          title: "Erro",
-          description: "Não foi possível carregar os palpites.",
+          title: "Erro ao carregar",
+          description: error.message,
           variant: "destructive",
         });
-        return [];
+        throw error;
       }
-      return data || [];
+      return data as Palpite[];
     },
-    enabled: !!user,
+    enabled: !!user, // Só executa se o user existir
   });
 
+  // 3. Redirecionamento correto sem refresh de página
   useEffect(() => {
-    if (session && !user) {
-      window.location.href = "/auth";
+    if (!isLoadingSession && !user) {
+      navigate("/auth");
     }
-  }, [session, user]);
+  }, [user, isLoadingSession, navigate]);
 
-  if (!user) {
-    return null; // Redireciona
-  }
+  if (isLoadingSession || !user) return null;
 
   return (
     <Layout>
       <div className="container py-10">
-        <h1 className="text-3xl font-bold mb-8">Meu Histórico de Palpites</h1>
+        <header className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold">Meu Histórico</h1>
+        </header>
 
-        {isLoading ? (
-          <p className="text-center">Carregando seus palpites...</p>
+        {isLoadingPalpites ? (
+          // 4. Skeleton Loading para melhor UX
+          <div className="grid gap-6">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-[200px] w-full rounded-lg" />
+            ))}
+          </div>
         ) : palpites.length === 0 ? (
           <Card>
             <CardContent className="p-10 text-center">
@@ -65,27 +86,35 @@ export default function Historico() {
                 Você ainda não salvou nenhum palpite.
               </p>
               <Button asChild>
-                <Link to="/palpites">Ir para Palpites</Link>
+                <Link to="/palpites">Gerar Palpites Agora</Link>
               </Button>
             </CardContent>
           </Card>
         ) : (
           <div className="grid gap-6">
-            {palpites.map((palpite: any) => (
-              <div key={palpite.id} className="border rounded-lg p-6 bg-card">
-                <p className="text-sm text-muted-foreground mb-4">
-                  Salvo em: {new Date(palpite.created_at).toLocaleString("pt-BR")}
+            {palpites.map((palpite) => (
+              <div key={palpite.id} className="border rounded-lg p-6 bg-card hover:shadow-md transition-shadow">
+                <p className="text-xs text-muted-foreground mb-4">
+                  {new Date(palpite.created_at).toLocaleDateString("pt-BR", {
+                    day: "2-digit",
+                    month: "long",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </p>
                 <PalpiteCard
                   numeros={palpite.numeros}
-                  scoreMedio={palpite.score_medio || undefined}
-                  metricas={palpite.metricas || {}}
+                  scoreMedio={palpite.score_medio}
+                  metricas={palpite.metricas}
                   showSaveButton={false}
                 />
-                {palpite.acertos !== undefined && (
-                  <p className="mt-4 text-lg font-bold text-primary">
-                    Acertos: {palpite.acertos} números
-                  </p>
+                {typeof palpite.acertos === 'number' && (
+                  <div className="mt-4 p-2 bg-primary/10 rounded text-center">
+                    <span className="font-bold text-primary">
+                      {palpite.acertos} Acertos Detectados
+                    </span>
+                  </div>
                 )}
               </div>
             ))}
