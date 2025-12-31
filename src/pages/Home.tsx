@@ -78,9 +78,13 @@ const quickLinks = [
 
 export default function Home() {
   const { data: ultimoConcurso, isLoading } = useQuery({
-    queryKey: ["ultimoConcurso"],
-    queryFn: () => api.getUltimoConcurso(),
-  });
+  queryKey: ["ultimoConcurso"],
+  queryFn: async () => {
+    const response = await api.get("/ultimos/1");
+    console.log("DEBUG Ultimo:", response.data);
+    return response.data[0];  // Pega o primeiro (mais recente)
+  },
+});
 
   return (
     <Layout>
