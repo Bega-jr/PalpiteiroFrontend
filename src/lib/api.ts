@@ -38,8 +38,18 @@ export const getPalpitesEstatisticos = async () => {
    CONCURSO / HISTÓRICO
 ===================== */
 export const getUltimoConcurso = async () => {
-  const resp = await api.get("/concurso/ultimos/1");
-  return resp.data.concurso;
+  try {
+    // Usando a rota que você confirmou que funciona no Vercel
+    const resp = await api.get("/ultimos/1");
+    console.log("DEBUG API (getUltimoConcurso):", resp.data);
+    
+    // Se a API retornar uma lista, pega o primeiro. Se for objeto, usa direto.
+    const data = Array.isArray(resp.data) ? resp.data[0] : resp.data;
+    return data;
+  } catch (error) {
+    console.error("ERRO AO BUSCAR ULTIMO CONCURSO:", error);
+    throw error;
+  }
 };
 
 export const getHistorico = async () => {
@@ -57,3 +67,4 @@ export const postSalvarPalpite = async (numeros: number[]) => {
   });
   return resp.data;
 };
+
