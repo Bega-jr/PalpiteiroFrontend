@@ -8,46 +8,34 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Trophy, Search, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
 
+const BASE_URL = "https://palpiteiro-backend.vercel.app";
+
 interface Concurso {
   concurso: number;
   data: string;
   dezenas: number[];
 }
 
-async function fetchUltimos(quantidade: number): Promise<Concurso[]> {
-  const res = await fetch(`/ultimos/${quantidade}`);
+async function fetchUltimos(quantidade: number = 50): Promise<Concurso[]> {
+  const res = await fetch(`${BASE_URL}/ultimos/${quantidade}`);
   if (!res.ok) throw new Error("Erro ao carregar últimos concursos");
-  return res.json(); // Já retorna array direto no formato correto
+  return res.json(); // Retorna array direto
 }
 
 async function fetchConcurso(numero: number): Promise<Concurso | null> {
-  const res = await fetch(`/concurso/${numero}`);
+  const res = await fetch(`${BASE_URL}/concurso/${numero}`);
   if (!res.ok) {
     if (res.status === 404) return null;
     throw new Error("Erro ao buscar concurso");
   }
-  const data = await res.json();
-  // Extrai o objeto dentro de "concurso" e mapeia dezenas
-  const row = data.concurso;
-  const bolas = [];
-  for (let i = 1; i <= 15; i++) {
-    const bola = row[`bola${i}`];
-    if (bola !== undefined && bola !== null) {
-      bolas.push(Number(bola));
-    }
-  }
-  return {
-    concurso: Number(row.concurso || row.Concurso),
-    data: row.data,
-    dezenas: bolas.sort((a, b) => a - b),
-  };
+  return res.json(); // Retorna objeto plano {concurso, data, dezenas}
 }
 
 export default function Resultados() {
   const [searchConcurso, setSearchConcurso] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-  const quantidadeLista = 50;
+  const quantidadeLista = 50; // Ajuste para 10 se preferir menos
 
   const {
     data: ultimosConcursos = [],
@@ -56,7 +44,7 @@ export default function Resultados() {
   } = useQuery<Concurso[]>({
     queryKey: ["ultimosConcursos", quantidadeLista],
     queryFn: () => fetchUltimos(quantidadeLista),
-    staleTime: 5 * 60 * 1000, // 5 minutos
+    staleTime: 5 * 60 * 1000, // Cache de 5 minutos
   });
 
   const {
@@ -97,7 +85,7 @@ export default function Resultados() {
       </section>
 
       <div className="container py-8 md:py-12 space-y-8">
-        {/* Busca */}
+        {/* Busca por Concurso */}
         <Card>
           <CardContent className="p-6">
             <form onSubmit={handleSearch} className="flex gap-4">
@@ -135,7 +123,7 @@ export default function Resultados() {
               <Card>
                 <CardContent className="p-6 text-center text-destructive flex items-center justify-center gap-2">
                   <AlertCircle className="h-4 w-4" />
-                  Erro ao buscar concurso.
+                  Erro ao buscar o concurso.
                 </CardContent>
               </Card>
             ) : concursoBuscado ? (
@@ -155,7 +143,7 @@ export default function Resultados() {
           </section>
         )}
 
-        {/* Lista de Últimos */}
+        {/* Lista de Últimos Resultados */}
         <section>
           <h2 className="font-display text-xl font-bold mb-4 flex items-center gap-2">
             <Trophy className="h-5 w-5 text-primary" />
