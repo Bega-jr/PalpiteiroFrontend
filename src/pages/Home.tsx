@@ -205,55 +205,87 @@ function Home() {
               </Card>
             )}
 
-            {/* Tabela de Rateio */}
+            {/* Tabela de Rateio - Responsiva */}
             <Card className="border-none shadow-md bg-white overflow-hidden">
               <div className="bg-muted/30 px-6 py-4 border-b flex justify-between items-center">
                 <h3 className="font-display font-bold text-sm uppercase tracking-wider flex items-center gap-2">
                   <Trophy className="h-4 w-4 text-lottery-gold" /> Rateio e Premiação
                 </h3>
               </div>
-              <CardContent className="p-0 overflow-x-auto">
-                <table className="w-full text-sm text-left">
-                  <thead className="text-xs text-muted-foreground uppercase bg-gray-50/50 font-bold">
-                    <tr>
-                      <th className="px-6 py-4">Acertos</th>
-                      <th className="px-6 py-4 text-center">Ganhadores</th>
-                      <th className="px-6 py-4 text-right">Prêmio Individual</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {[
-                      { label: "15 Acertos", g: c.ganhadores_15, v: c.valor_15, h: true },
-                      { label: "14 Acertos", g: c.ganhadores_14, v: c.valor_14, h: false },
-                      { label: "13 Acertos", g: c.ganhadores_13, v: c.valor_13, h: false },
-                      { label: "12 Acertos", g: c.ganhadores_12, v: c.valor_12, h: false },
-                      { label: "11 Acertos", g: c.ganhadores_11, v: c.valor_11, h: false },
-                    ].map((f, i) => (
-                      <tr
-                        key={i}
-                        className={`hover:bg-gray-50/50 ${f.h ? "bg-primary/5" : ""}`}
-                      >
-                        <td
-                          className={`px-6 py-4 font-bold ${
-                            f.h ? "text-primary" : "text-gray-900"
-                          }`}
-                        >
-                          {f.label}
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          {Number(f.g || 0).toLocaleString("pt-BR")}
-                        </td>
-                        <td
-                          className={`px-6 py-4 text-right font-bold ${
-                            f.h ? "text-primary" : "text-gray-700"
-                          }`}
-                        >
-                          {formatarMoeda(f.v)}
-                        </td>
+              <CardContent className="p-0">
+                {/* Versão Desktop: Tabela tradicional */}
+                <div className="hidden md:block">
+                  <table className="w-full text-sm text-left">
+                    <thead className="text-xs text-muted-foreground uppercase bg-gray-50/50 font-bold">
+                      <tr>
+                        <th className="px-6 py-4">Acertos</th>
+                        <th className="px-6 py-4 text-center">Ganhadores</th>
+                        <th className="px-6 py-4 text-right">Prêmio Individual</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {[
+                        { label: "15 Acertos", g: c.ganhadores_15, v: c.valor_15, h: true },
+                        { label: "14 Acertos", g: c.ganhadores_14, v: c.valor_14, h: false },
+                        { label: "13 Acertos", g: c.ganhadores_13, v: c.valor_13, h: false },
+                        { label: "12 Acertos", g: c.ganhadores_12, v: c.valor_12, h: false },
+                        { label: "11 Acertos", g: c.ganhadores_11, v: c.valor_11, h: false },
+                      ].map((f, i) => (
+                        <tr
+                          key={i}
+                          className={`hover:bg-gray-50/50 ${f.h ? "bg-primary/5" : ""}`}
+                        >
+                          <td className={`px-6 py-4 font-bold ${f.h ? "text-primary" : "text-gray-900"}`}>
+                            {f.label}
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            {Number(f.g || 0).toLocaleString("pt-BR")}
+                          </td>
+                          <td className={`px-6 py-4 text-right font-bold ${f.h ? "text-primary" : "text-gray-700"}`}>
+                            {formatarMoeda(f.v)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+            
+                {/* Versão Mobile: Cards verticais */}
+                <div className="md:hidden divide-y divide-gray-100">
+                  {[
+                    { label: "15 Acertos", g: c.ganhadores_15, v: c.valor_15, h: true },
+                    { label: "14 Acertos", g: c.ganhadores_14, v: c.valor_14, h: false },
+                    { label: "13 Acertos", g: c.ganhadores_13, v: c.valor_13, h: false },
+                    { label: "12 Acertos", g: c.ganhadores_12, v: c.valor_12, h: false },
+                    { label: "11 Acertos", g: c.ganhadores_11, v: c.valor_11, h: false },
+                  ].map((f, i) => (
+                    <div
+                      key={i}
+                      className={`p-5 ${f.h ? "bg-primary/5" : "bg-white"}`}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <span className={`font-bold text-lg ${f.h ? "text-primary" : "text-gray-900"}`}>
+                          {f.label}
+                        </span>
+                        {f.h && <Badge className="bg-primary text-primary-foreground">Prêmio Principal</Badge>}
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-muted-foreground">Ganhadores</p>
+                          <p className="font-semibold">
+                            {Number(f.g || 0).toLocaleString("pt-BR")}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-muted-foreground">Prêmio</p>
+                          <p className={`font-bold text-lg ${f.h ? "text-primary" : "text-gray-700"}`}>
+                            {formatarMoeda(f.v)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
 
