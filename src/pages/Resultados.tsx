@@ -8,10 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Trophy, Search, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
 import Papa from 'papaparse';
 
-// Interface que o ConcursoCard espera
+// IMPORTANTE: Importa a URL do arquivo CSV onde quer que ele esteja
+// Ajuste a quantidade de ../ se a pasta 'data' estiver em níveis diferentes
+import csvUrl from "../../data/Lotofacil.csv?url";
+
 interface Concurso {
   concurso: number;
-  data: string; // "YYYY-MM-DD"
+  data: string;
   dezenas: number[];
 }
 
@@ -22,50 +25,52 @@ export default function Resultados() {
   const [isLoading, setIsLoading] = useState(true);
   const itemsPerPage = 10;
 
-  // Carrega e parseia o CSV uma única vez
   useEffect(() => {
-    Papa.parse("/data/Lotofacil.CSV", {
+    // Usamos a csvUrl gerada pelo Vite para garantir que o Netlify ache o arquivo
+    Papa.parse(csvUrl, {
       download: true,
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
-        const concursos: Concurso[] = results.data
-          .filter((row: any) => row.loteria === "lotofacil" && row.concurso)
-          .map((row: any) => {
-            const bolas = [
-              row.bola1, row.bola2, row.bola3, row.bola4, row.bola5,
-              row.bola6, row.bola7, row.bola8, row.bola9, row.bola10,
-              row.bola11, row.bola12, row.bola13, row.bola14, row.bola15,
-            ]
-              .map(Number)
-              .filter(n => !isNaN(n))
-              .sort((a, b) => a - b);
+        try {
+          const concursos: Concurso[] = results.data
+            .filter((row: any) => row.loteria === "lotofacil" && row.concurso)
+            .map((row: any) => {
+              const bolas = [
+                row.bola1, row.bola2, row.bola3, row.bola4, row.bola5,
+                row.bola6, row.bola7, row.bola8, row.bola9, row.bola10,
+                row.bola11, row.bola12, row.bola13, row.bola14, row.bola15,
+              ]
+                .map(Number)
+                .filter(n => !isNaN(n))
+                .sort((a, b) => a - b);
 
-            return {
-              concurso: Number(row.concurso),
-              data: row.data, // já vem no formato YYYY-MM-DD
-              dezenas: bolas,
-            };
-          })
-          // Ordena do mais recente para o mais antigo
-          .sort((a, b) => b.concurso - a.concurso);
+              return {
+                concurso: Number(row.concurso),
+                data: row.data,
+                dezenas: bolas,
+              };
+            })
+            .sort((a, b) => b.concurso - a.concurso);
 
-        setAllConcursos(concursos);
-        setIsLoading(false);
+          setAllConcursos(concursos);
+        } catch (err) {
+          console.error("Erro ao processar dados do CSV:", err);
+        } finally {
+          setIsLoading(false);
+        }
       },
       error: (error) => {
-        console.error("Erro ao carregar CSV:", error);
+        console.error("Erro ao carregar arquivo CSV:", error);
         setIsLoading(false);
       },
     });
   }, []);
 
-  // Busca específica
   const concursoBuscado = searchConcurso
     ? allConcursos.find(c => c.concurso === parseInt(searchConcurso))
     : undefined;
 
-  // Lista paginada (últimos resultados)
   const totalPages = Math.ceil(allConcursos.length / itemsPerPage);
   const paginatedConcursos = allConcursos.slice(
     (currentPage - 1) * itemsPerPage,
@@ -78,7 +83,6 @@ export default function Resultados() {
 
   return (
     <Layout>
-      {/* Header */}
       <section className="gradient-hero text-primary-foreground py-12 md:py-16">
         <div className="container">
           <div className="max-w-2xl">
@@ -87,14 +91,13 @@ export default function Resultados() {
             </h1>
             <p className="text-white/80">
               Confira os últimos resultados da Lotofácil. Dados atualizados
-              diretamente da Caixa Econômica Federal.
+              diretamente da base de dados.
             </p>
           </div>
         </div>
       </section>
 
       <div className="container py-8 md:py-12 space-y-8">
-        {/* Busca por Concurso */}
         <Card>
           <CardContent className="p-6">
             <form onSubmit={handleSearch} className="flex gap-4">
@@ -115,7 +118,6 @@ export default function Resultados() {
           </CardContent>
         </Card>
 
-        {/* Resultado da Busca */}
         {searchConcurso && (
           <section>
             <h2 className="font-display text-xl font-bold mb-4 flex items-center gap-2">
@@ -123,11 +125,7 @@ export default function Resultados() {
               Resultado do Concurso {searchConcurso}
             </h2>
             {isLoading ? (
-              <Card>
-                <CardContent className="p-6 text-center text-muted-foreground">
-                  Carregando...
-                </CardContent>
-              </Card>
+              <Card><CardContent className="p-6 text-center">Carregando...</CardContent></Card>
             ) : concursoBuscado ? (
               <ConcursoCard
                 concurso={concursoBuscado.concurso}
@@ -145,7 +143,6 @@ export default function Resultados() {
           </section>
         )}
 
-        {/* Lista de Concursos */}
         <section>
           <h2 className="font-display text-xl font-bold mb-4 flex items-center gap-2">
             <Trophy className="h-5 w-5 text-primary" />
@@ -168,7 +165,6 @@ export default function Resultados() {
                 ))}
               </div>
 
-              {/* Paginação */}
               {totalPages > 1 && (
                 <div className="flex items-center justify-center gap-4 mt-8">
                   <Button
