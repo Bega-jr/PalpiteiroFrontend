@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useSearchParams, useNavigate } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,65 +8,41 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Clover, Mail, Lock, User, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Auth() {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const initialMode = searchParams.get("mode") === "signup" ? "signup" : "login";
   const [activeTab, setActiveTab] = useState(initialMode);
   const { toast } = useToast();
+  const { login, user, isAuthenticated, loading: authLoading } = useAuth();
 
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
-  const [signupForm, setSignupForm] = useState({
-    name: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-  });
+  const [signupForm, setSignupForm] = useState({ name: "", email: "", password: "", confirmPassword: "" });
   const [forgotEmail, setForgotEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Função para salvar token localmente (para usar no cache/session do backend)
-  const saveToken = (token: string) => {
-    localStorage.setItem("authToken", token);
-  };
-
+  // Login com hook useAuth
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!loginForm.email || !loginForm.password) {
       toast({ title: "Erro", description: "Preencha email e senha.", variant: "destructive" });
       return;
     }
-
     setLoading(true);
-
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: loginForm.email.trim(),
-      password: loginForm.password,
-    });
-
-    setLoading(false);
-
-    if (error) {
-      toast({
-        title: "Erro ao entrar",
-        description: error.message.includes("Invalid login credentials")
-          ? "Email ou senha incorretos."
-          : error.message,
-        variant: "destructive",
-      });
-    } else if (data.session?.access_token) {
-      // Salva o token local
-      saveToken(data.session.access_token);
-
-      toast({ title: "Sucesso!", description: "Login realizado com sucesso." });
-      navigate("/historico"); // redireciona para página protegida
-    } else {
-      toast({ title: "Erro", description: "Falha ao autenticar.", variant: "destructive" });
+    try {
+      await login(loginForm.email, loginForm.password);
+      if (isAuthenticated) {
+        window.location.href = "/historico"; // Redireciona após login
+      }
+    } catch (err: any) {
+      toast({ title: "Erro", description: err?.message || "Erro inesperado.", variant: "destructive" });
+    } finally {
+      setLoading(false);
     }
   };
 
+  // Cadastro
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (signupForm.password !== signupForm.confirmPassword) {
@@ -77,53 +53,52 @@ export default function Auth() {
       toast({ title: "Erro", description: "Preencha todos os campos.", variant: "destructive" });
       return;
     }
-
     setLoading(true);
-
-    const { data, error } = await supabase.auth.signUp({
-      email: signupForm.email.trim(),
-      password: signupForm.password,
-      options: {
-        data: { name: signupForm.name.trim() },
-        emailRedirectTo: window.location.origin, // Redireciona de volta após confirmar email
-      },
-    });
-
-    setLoading(false);
-
-    if (error) {
-      toast({ title: "Erro ao cadastrar", description: error.message, variant: "destructive" });
-    } else {
-      toast({
-        title: "Cadastro realizado!",
-        description: "Verifique seu email para confirmar a conta antes de fazer login.",
+    try {
+      const { error } = await supabase.auth.signUp({
+        email: signupForm.email.trim(),
+        password: signupForm.password,
+        options: {
+          data: { name: signupForm.name.trim() },
+          emailRedirectTo: window.location.origin,
+        },
       });
-      setActiveTab("login");
-      setLoginForm({ email: signupForm.email, password: "" });
+      if (error) {
+        toast({ title: "Erro ao cadastrar", description: error.message, variant: "destructive" });
+      } else {
+        toast({ title: "Cadastro realizado!", description: "Verifique seu email para confirmar a conta." });
+        setActiveTab("login");
+        setLoginForm({ email: signupForm.email, password: "" });
+      }
+    } catch (err: any) {
+      toast({ title: "Erro", description: err?.message || "Erro inesperado.", variant: "destructive" });
+    } finally {
+      setLoading(false);
     }
   };
 
+  // Esqueci a senha
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!forgotEmail) {
       toast({ title: "Erro", description: "Digite seu email.", variant: "destructive" });
       return;
     }
-
     setLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail.trim(), {
-      redirectTo: window.location.origin + "/auth",
-    });
-    setLoading(false);
-
-    if (error) {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
-    } else {
-      toast({
-        title: "Email enviado!",
-        description: "Verifique sua caixa de entrada para redefinir a senha.",
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail.trim(), {
+        redirectTo: window.location.origin + "/auth",
       });
-      setForgotEmail("");
+      if (error) {
+        toast({ title: "Erro", description: error.message, variant: "destructive" });
+      } else {
+        toast({ title: "Email enviado!", description: "Verifique sua caixa de entrada." });
+        setForgotEmail("");
+      }
+    } catch (err: any) {
+      toast({ title: "Erro", description: err?.message || "Erro inesperado.", variant: "destructive" });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -166,7 +141,7 @@ export default function Auth() {
                           value={loginForm.email}
                           onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
                           required
-                          disabled={loading}
+                          disabled={loading || authLoading}
                         />
                       </div>
                     </div>
@@ -182,12 +157,12 @@ export default function Auth() {
                           value={loginForm.password}
                           onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
                           required
-                          disabled={loading}
+                          disabled={loading || authLoading}
                         />
                       </div>
                     </div>
-                    <Button type="submit" className="w-full mt-6" disabled={loading}>
-                      {loading ? "Entrando..." : "Entrar"}
+                    <Button type="submit" className="w-full mt-6" disabled={loading || authLoading}>
+                      {loading || authLoading ? "Entrando..." : "Entrar"}
                     </Button>
                   </form>
 
@@ -271,9 +246,7 @@ export default function Auth() {
                           placeholder="••••••••"
                           className="pl-10"
                           value={signupForm.confirmPassword}
-                          onChange={(e) =>
-                            setSignupForm({ ...signupForm, confirmPassword: e.target.value })
-                          }
+                          onChange={(e) => setSignupForm({ ...signupForm, confirmPassword: e.target.value })}
                           required
                           disabled={loading}
                         />
@@ -295,4 +268,3 @@ export default function Auth() {
     </Layout>
   );
 }
-
