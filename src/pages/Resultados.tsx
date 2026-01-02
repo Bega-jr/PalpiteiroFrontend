@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Layout } from "@/components/Layout";
 import { ConcursoCard } from "@/components/ConcursoCard";
 import { LoadingList } from "@/components/LoadingStates";
@@ -6,71 +7,71 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Trophy, Search, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
-import Papa from 'papaparse';
 
-// Interface que o ConcursoCard espera
 interface Concurso {
   concurso: number;
   data: string;
   dezenas: number[];
 }
 
+async function fetchUltimos(quantidade: number): Promise<Concurso[]> {
+  const res = await fetch(`/ultimos/${quantidade}`);
+  if (!res.ok) throw new Error("Erro ao carregar últimos concursos");
+  return res.json(); // Já retorna array direto no formato correto
+}
+
+async function fetchConcurso(numero: number): Promise<Concurso | null> {
+  const res = await fetch(`/concurso/${numero}`);
+  if (!res.ok) {
+    if (res.status === 404) return null;
+    throw new Error("Erro ao buscar concurso");
+  }
+  const data = await res.json();
+  // Extrai o objeto dentro de "concurso" e mapeia dezenas
+  const row = data.concurso;
+  const bolas = [];
+  for (let i = 1; i <= 15; i++) {
+    const bola = row[`bola${i}`];
+    if (bola !== undefined && bola !== null) {
+      bolas.push(Number(bola));
+    }
+  }
+  return {
+    concurso: Number(row.concurso || row.Concurso),
+    data: row.data,
+    dezenas: bolas.sort((a, b) => a - b),
+  };
+}
+
 export default function Resultados() {
   const [searchConcurso, setSearchConcurso] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [allConcursos, setAllConcursos] = useState<Concurso[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const itemsPerPage = 10;
+  const quantidadeLista = 50;
 
-  useEffect(() => {
-    // Usamos o caminho absoluto "/data/Lotofacil.csv". 
-    // Para isso funcionar no Netlify, veja a instrução do package.json abaixo.
-    Papa.parse("/data/Lotofacil.csv", {
-      download: true,
-      header: true,
-      skipEmptyLines: true,
-      complete: (results) => {
-        try {
-          const concursos: Concurso[] = results.data
-            .filter((row: any) => row.loteria === "lotofacil" && row.concurso)
-            .map((row: any) => {
-              const bolas = [
-                row.bola1, row.bola2, row.bola3, row.bola4, row.bola5,
-                row.bola6, row.bola7, row.bola8, row.bola9, row.bola10,
-                row.bola11, row.bola12, row.bola13, row.bola14, row.bola15,
-              ]
-                .map(Number)
-                .filter(n => !isNaN(n))
-                .sort((a, b) => a - b);
+  const {
+    data: ultimosConcursos = [],
+    isLoading: loadingLista,
+    isError: errorLista,
+  } = useQuery<Concurso[]>({
+    queryKey: ["ultimosConcursos", quantidadeLista],
+    queryFn: () => fetchUltimos(quantidadeLista),
+    staleTime: 5 * 60 * 1000, // 5 minutos
+  });
 
-              return {
-                concurso: Number(row.concurso),
-                data: row.data,
-                dezenas: bolas,
-              };
-            })
-            .sort((a, b) => b.concurso - a.concurso);
+  const {
+    data: concursoBuscado,
+    isLoading: loadingBusca,
+    isError: errorBusca,
+  } = useQuery<Concurso | null>({
+    queryKey: ["concurso", searchConcurso],
+    queryFn: () => fetchConcurso(parseInt(searchConcurso)),
+    enabled: !!searchConcurso && !isNaN(parseInt(searchConcurso)),
+    retry: false,
+  });
 
-          setAllConcursos(concursos);
-        } catch (err) {
-          console.error("Erro ao processar CSV:", err);
-        } finally {
-          setIsLoading(false);
-        }
-      },
-      error: (error) => {
-        console.error("Erro ao buscar o arquivo CSV:", error);
-        setIsLoading(false);
-      },
-    });
-  }, []);
-
-  const concursoBuscado = searchConcurso
-    ? allConcursos.find(c => c.concurso === parseInt(searchConcurso))
-    : undefined;
-
-  const totalPages = Math.ceil(allConcursos.length / itemsPerPage);
-  const paginatedConcursos = allConcursos.slice(
+  const totalPages = Math.ceil(ultimosConcursos.length / itemsPerPage);
+  const paginatedConcursos = ultimosConcursos.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
@@ -88,13 +89,15 @@ export default function Resultados() {
               Resultados Oficiais
             </h1>
             <p className="text-white/80">
-              Confira os últimos resultados da Lotofácil. Dados atualizados diretamente da base oficial.
+              Confira os últimos resultados da Lotofácil. Dados atualizados
+              diretamente da Caixa Econômica Federal.
             </p>
           </div>
         </div>
       </section>
 
       <div className="container py-8 md:py-12 space-y-8">
+        {/* Busca */}
         <Card>
           <CardContent className="p-6">
             <form onSubmit={handleSearch} className="flex gap-4">
@@ -107,7 +110,7 @@ export default function Resultados() {
                   className="w-full"
                 />
               </div>
-              <Button type="submit" disabled={!searchConcurso}>
+              <Button type="submit" disabled={!searchConcurso || loadingBusca}>
                 <Search className="mr-2 h-4 w-4" />
                 Buscar
               </Button>
@@ -115,14 +118,26 @@ export default function Resultados() {
           </CardContent>
         </Card>
 
+        {/* Resultado da Busca */}
         {searchConcurso && (
           <section>
             <h2 className="font-display text-xl font-bold mb-4 flex items-center gap-2">
               <Trophy className="h-5 w-5 text-lottery-gold" />
               Resultado do Concurso {searchConcurso}
             </h2>
-            {isLoading ? (
-              <Card><CardContent className="p-6 text-center">Carregando...</CardContent></Card>
+            {loadingBusca ? (
+              <Card>
+                <CardContent className="p-6 text-center text-muted-foreground">
+                  Buscando...
+                </CardContent>
+              </Card>
+            ) : errorBusca ? (
+              <Card>
+                <CardContent className="p-6 text-center text-destructive flex items-center justify-center gap-2">
+                  <AlertCircle className="h-4 w-4" />
+                  Erro ao buscar concurso.
+                </CardContent>
+              </Card>
             ) : concursoBuscado ? (
               <ConcursoCard
                 concurso={concursoBuscado.concurso}
@@ -140,14 +155,21 @@ export default function Resultados() {
           </section>
         )}
 
+        {/* Lista de Últimos */}
         <section>
           <h2 className="font-display text-xl font-bold mb-4 flex items-center gap-2">
             <Trophy className="h-5 w-5 text-primary" />
             Últimos Resultados
           </h2>
-
-          {isLoading ? (
+          {loadingLista ? (
             <LoadingList />
+          ) : errorLista ? (
+            <Card>
+              <CardContent className="p-6 text-center text-destructive flex items-center justify-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                Erro ao carregar a lista de concursos.
+              </CardContent>
+            </Card>
           ) : paginatedConcursos.length > 0 ? (
             <>
               <div className="space-y-3">
@@ -161,7 +183,6 @@ export default function Resultados() {
                   />
                 ))}
               </div>
-
               {totalPages > 1 && (
                 <div className="flex items-center justify-center gap-4 mt-8">
                   <Button
