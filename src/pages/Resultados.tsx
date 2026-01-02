@@ -8,10 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Trophy, Search, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
 import Papa from 'papaparse';
 
-// IMPORTANTE: Importa a URL do arquivo CSV onde quer que ele esteja
-// Ajuste a quantidade de ../ se a pasta 'data' estiver em níveis diferentes
-import csvUrl from "../../data/Lotofacil.csv?url";
-
+// Interface que o ConcursoCard espera
 interface Concurso {
   concurso: number;
   data: string;
@@ -26,8 +23,9 @@ export default function Resultados() {
   const itemsPerPage = 10;
 
   useEffect(() => {
-    // Usamos a csvUrl gerada pelo Vite para garantir que o Netlify ache o arquivo
-    Papa.parse(csvUrl, {
+    // Usamos o caminho absoluto "/data/Lotofacil.csv". 
+    // Para isso funcionar no Netlify, veja a instrução do package.json abaixo.
+    Papa.parse("/data/Lotofacil.csv", {
       download: true,
       header: true,
       skipEmptyLines: true,
@@ -55,13 +53,13 @@ export default function Resultados() {
 
           setAllConcursos(concursos);
         } catch (err) {
-          console.error("Erro ao processar dados do CSV:", err);
+          console.error("Erro ao processar CSV:", err);
         } finally {
           setIsLoading(false);
         }
       },
       error: (error) => {
-        console.error("Erro ao carregar arquivo CSV:", error);
+        console.error("Erro ao buscar o arquivo CSV:", error);
         setIsLoading(false);
       },
     });
@@ -90,8 +88,7 @@ export default function Resultados() {
               Resultados Oficiais
             </h1>
             <p className="text-white/80">
-              Confira os últimos resultados da Lotofácil. Dados atualizados
-              diretamente da base de dados.
+              Confira os últimos resultados da Lotofácil. Dados atualizados diretamente da base oficial.
             </p>
           </div>
         </div>
