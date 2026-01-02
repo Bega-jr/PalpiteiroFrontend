@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Clover, Mail, Lock, User, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function Auth() {
@@ -15,14 +16,27 @@ export default function Auth() {
   const initialMode = searchParams.get("mode") === "signup" ? "signup" : "login";
   const [activeTab, setActiveTab] = useState(initialMode);
   const { toast } = useToast();
-  const { login, user, isAuthenticated, loading: authLoading } = useAuth();
+
+  const { user, loading: authLoading } = useAuth();
 
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
-  const [signupForm, setSignupForm] = useState({ name: "", email: "", password: "", confirmPassword: "" });
+  const [signupForm, setSignupForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
   const [forgotEmail, setForgotEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Login com hook useAuth
+  // Redireciona automaticamente se já estiver logado
+  useEffect(() => {
+    if (user) {
+      window.location.href = "/historico";
+    }
+  }, [user]);
+
+  // LOGIN
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!loginForm.email || !loginForm.password) {
@@ -31,10 +45,20 @@ export default function Auth() {
     }
     setLoading(true);
     try {
-      await login(loginForm.email, loginForm.password);
-      if (isAuthenticated) {
-        window.location.href = "/historico"; // Redireciona após login
+      const { error } = await supabase.auth.signInWithPassword({
+        email: loginForm.email.trim(),
+        password: loginForm.password,
+      });
+      if (error) {
+        toast({
+          title: "Erro ao entrar",
+          description: error.message.includes("Invalid login credentials")
+            ? "Email ou senha incorretos."
+            : error.message,
+          variant: "destructive",
+        });
       }
+      // O efeito do hook `useAuth` vai cuidar do redirecionamento
     } catch (err: any) {
       toast({ title: "Erro", description: err?.message || "Erro inesperado.", variant: "destructive" });
     } finally {
@@ -42,7 +66,7 @@ export default function Auth() {
     }
   };
 
-  // Cadastro
+  // CADASTRO
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (signupForm.password !== signupForm.confirmPassword) {
@@ -60,13 +84,16 @@ export default function Auth() {
         password: signupForm.password,
         options: {
           data: { name: signupForm.name.trim() },
-          emailRedirectTo: window.location.origin,
+          emailRedirectTo: window.location.origin + "/auth",
         },
       });
       if (error) {
         toast({ title: "Erro ao cadastrar", description: error.message, variant: "destructive" });
       } else {
-        toast({ title: "Cadastro realizado!", description: "Verifique seu email para confirmar a conta." });
+        toast({
+          title: "Cadastro realizado!",
+          description: "Verifique seu email para confirmar a conta antes de fazer login.",
+        });
         setActiveTab("login");
         setLoginForm({ email: signupForm.email, password: "" });
       }
@@ -77,7 +104,7 @@ export default function Auth() {
     }
   };
 
-  // Esqueci a senha
+  // ESQUECI A SENHA
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!forgotEmail) {
@@ -166,7 +193,7 @@ export default function Auth() {
                     </Button>
                   </form>
 
-                  {/* Esqueci a senha */}
+                  {/* ESQUECI A SENHA */}
                   <form onSubmit={handleForgotPassword} className="mt-4">
                     <Label htmlFor="forgot-email">Esqueceu a senha?</Label>
                     <div className="flex gap-2 mt-2">
