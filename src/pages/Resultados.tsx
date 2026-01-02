@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Trophy, Search, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
-import { parse } from "papaparse";
+import Papa from 'papaparse';
 
 // Interface que o ConcursoCard espera
 interface Concurso {
@@ -24,7 +24,7 @@ export default function Resultados() {
 
   // Carrega e parseia o CSV uma única vez
   useEffect(() => {
-    parse("/data/Lotofacil.CSV", {
+    Papa.parse("/data/Lotofacil.CSV", {
       download: true,
       header: true,
       skipEmptyLines: true,
