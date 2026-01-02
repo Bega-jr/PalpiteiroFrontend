@@ -7,17 +7,27 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
-import { Trophy, Search, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react"; // Adicionado AlertCircle
+import { Trophy, Search, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
 
 /**
- * [TEMPORÁRIO PARA TESTE] Interface de tipo para garantir que os dados do backend 
- * sejam compatíveis com o que o frontend espera. Pode ser movida para src/types/loteria.ts 
- * ou excluída se o problema não for a tipagem.
+ * Interface baseada no formato real da API oficial da Caixa para Lotofácil:
+ * - numeroConcurso
+ * - dataApuracao (ex: "01/01/2026")
+ * - listaDezenas (array de strings como "01", "02", ...)
  */
-interface ConcursoTeste {
+interface ConcursoCaixa {
+  numeroConcurso: number;
+  dataApuracao: string;
+  listaDezenas: string[];
+}
+
+/**
+ * Interface que o ConcursoCard espera (mantida para compatibilidade)
+ */
+interface ConcursoFrontend {
   concurso: number;
-  data: string; // Espera-se uma string no formato "YYYY-MM-DD"
-  dezenas: number[]; // Espera-se uma lista de números [1, 2, ..., 25]
+  data: string; // "YYYY-MM-DD"
+  dezenas: number[];
 }
 
 export default function Resultados() {
@@ -25,20 +35,35 @@ export default function Resultados() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // Aplicação da interface temporária <ConcursoTeste[]> e adição de isError
-  const { data: ultimosConcursos, isLoading: loadingLista, isError: errorLista } = useQuery<ConcursoTeste[]>({
+  // Lista dos últimos 50 concursos (assume que seu backend já retorna no formato correto)
+  const { data: ultimosConcursos, isLoading: loadingLista, isError: errorLista } = useQuery<ConcursoFrontend[]>({
     queryKey: ["ultimosConcursos", 50],
     queryFn: () => api.getUltimosConcursos(50),
-    staleTime: 1000 * 60 * 5, 
+    staleTime: 1000 * 60 * 5,
   });
 
-  // Aplicação da interface temporária <ConcursoTeste | undefined> e adição de isError
-  const { data: concursoBuscado, isLoading: loadingBusca, isError: errorBusca } = useQuery<ConcursoTeste | undefined>({
+  // Busca por concurso específico - agora com mapeamento do formato real da Caixa
+  const { data: concursoBuscadoRaw, isLoading: loadingBusca, isError: errorBusca } = useQuery<ConcursoCaixa | undefined>({
     queryKey: ["concurso", searchConcurso],
-    queryFn: () => api.getConcurso(parseInt(searchConcurso)),
+    queryFn: async () => {
+      const num = parseInt(searchConcurso);
+      if (isNaN(num)) return undefined;
+      const response = await fetch(`https://servicebus2.caixa.gov.br/portaldeloterias/api/lotofacil/${num}`);
+      if (!response.ok) throw new Error("Não encontrado");
+      return response.json();
+    },
     enabled: !!searchConcurso && !isNaN(parseInt(searchConcurso)),
-    retry: false, // Importante para não ficar tentando buscar um 404
+    retry: false,
   });
+
+  // Mapeia para o formato esperado pelo ConcursoCard
+  const concursoBuscado: ConcursoFrontend | undefined = concursoBuscadoRaw
+    ? {
+        concurso: concursoBuscadoRaw.numeroConcurso,
+        data: concursoBuscadoRaw.dataApuracao.split("/").reverse().join("-"), // "DD/MM/YYYY" → "YYYY-MM-DD"
+        dezenas: concursoBuscadoRaw.listaDezenas.map(Number).sort((a, b) => a - b),
+      }
+    : undefined;
 
   const concursos = Array.isArray(ultimosConcursos) ? ultimosConcursos : [];
   const totalPages = Math.ceil(concursos.length / itemsPerPage);
@@ -67,7 +92,6 @@ export default function Resultados() {
           </div>
         </div>
       </section>
-
       <div className="container py-8 md:py-12 space-y-8">
         {/* Busca por Concurso */}
         <Card>
@@ -104,14 +128,25 @@ export default function Resultados() {
                 </CardContent>
               </Card>
             ) : errorBusca ? (
-                 <Card><CardContent className="p-6 text-center text-destructive flex items-center justify-center gap-2"><AlertCircle className="h-4 w-4" /> Concurso não encontrado.</CardContent></Card>
+              <Card>
+                <CardContent className="p-6 text-center text-destructive flex items-center justify-center gap-2">
+                  <AlertCircle className="h-4 w-4" />
+                  Concurso não encontrado.
+                </CardContent>
+              </Card>
             ) : concursoBuscado ? (
               <ConcursoCard
                 concurso={concursoBuscado.concurso}
                 data={concursoBuscado.data}
                 dezenas={concursoBuscado.dezenas}
               />
-            ) : null}
+            ) : (
+              <Card>
+                <CardContent className="p-6 text-center text-muted-foreground">
+                  Nenhum resultado encontrado.
+                </CardContent>
+              </Card>
+            )}
           </section>
         )}
 
@@ -121,12 +156,16 @@ export default function Resultados() {
             <Trophy className="h-5 w-5 text-primary" />
             Últimos Resultados
           </h2>
-
           {loadingLista ? (
             <LoadingList />
           ) : errorLista ? (
-             <Card><CardContent className="p-6 text-center text-destructive flex items-center justify-center gap-2"><AlertCircle className="h-4 w-4" /> Erro ao carregar a lista de concursos.</CardContent></Card>
-          ) : (
+            <Card>
+              <CardContent className="p-6 text-center text-destructive flex items-center justify-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                Erro ao carregar a lista de concursos.
+              </CardContent>
+            </Card>
+          ) : paginatedConcursos.length > 0 ? (
             <>
               <div className="space-y-3">
                 {paginatedConcursos.map((concurso) => (
@@ -139,7 +178,6 @@ export default function Resultados() {
                   />
                 ))}
               </div>
-
               {/* Paginação */}
               {totalPages > 1 && (
                 <div className="flex items-center justify-center gap-4 mt-8">
@@ -167,6 +205,12 @@ export default function Resultados() {
                 </div>
               )}
             </>
+          ) : (
+            <Card>
+              <CardContent className="p-6 text-center text-muted-foreground">
+                Nenhum resultado disponível no momento.
+              </CardContent>
+            </Card>
           )}
         </section>
       </div>
