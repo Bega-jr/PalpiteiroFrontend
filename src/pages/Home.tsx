@@ -5,6 +5,7 @@ import { ConcursoCard } from "@/components/ConcursoCard";
 import { LoadingCard } from "@/components/LoadingStates";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { getUltimoConcurso } from "@/lib/api";
 import {
   Clover,
@@ -25,7 +26,7 @@ function Home() {
   const { data: c, isLoading, isFetching } = useQuery({
     queryKey: ["ultimoConcurso"],
     queryFn: getUltimoConcurso,
-    staleTime: 1000 * 60 * 30, // 30 minutos
+    staleTime: 1000 * 60 * 30,
   });
 
   const forceRefresh = () => {
@@ -191,7 +192,6 @@ function Home() {
                       )
                     )}
 
-                    {/* Fallback para Canal Eletrônico */}
                     {(Number(c.ganhadores_15) > 0 &&
                       (!c.listaMunicipioUFGanhadores ||
                         c.listaMunicipioUFGanhadores.length === 0)) && (
@@ -213,7 +213,7 @@ function Home() {
                 </h3>
               </div>
               <CardContent className="p-0">
-                {/* Versão Desktop: Tabela tradicional */}
+                {/* Desktop: Tabela tradicional */}
                 <div className="hidden md:block">
                   <table className="w-full text-sm text-left">
                     <thead className="text-xs text-muted-foreground uppercase bg-gray-50/50 font-bold">
@@ -235,13 +235,21 @@ function Home() {
                           key={i}
                           className={`hover:bg-gray-50/50 ${f.h ? "bg-primary/5" : ""}`}
                         >
-                          <td className={`px-6 py-4 font-bold ${f.h ? "text-primary" : "text-gray-900"}`}>
+                          <td
+                            className={`px-6 py-4 font-bold ${
+                              f.h ? "text-primary" : "text-gray-900"
+                            }`}
+                          >
                             {f.label}
                           </td>
                           <td className="px-6 py-4 text-center">
                             {Number(f.g || 0).toLocaleString("pt-BR")}
                           </td>
-                          <td className={`px-6 py-4 text-right font-bold ${f.h ? "text-primary" : "text-gray-700"}`}>
+                          <td
+                            className={`px-6 py-4 text-right font-bold ${
+                              f.h ? "text-primary" : "text-gray-700"
+                            }`}
+                          >
                             {formatarMoeda(f.v)}
                           </td>
                         </tr>
@@ -249,8 +257,8 @@ function Home() {
                     </tbody>
                   </table>
                 </div>
-            
-                {/* Versão Mobile: Cards verticais */}
+
+                {/* Mobile: Cards verticais */}
                 <div className="md:hidden divide-y divide-gray-100">
                   {[
                     { label: "15 Acertos", g: c.ganhadores_15, v: c.valor_15, h: true },
@@ -263,22 +271,26 @@ function Home() {
                       key={i}
                       className={`p-5 ${f.h ? "bg-primary/5" : "bg-white"}`}
                     >
-                      <div className="flex justify-between items-start mb-2">
+                      <div className="flex justify-between items-start mb-3">
                         <span className={`font-bold text-lg ${f.h ? "text-primary" : "text-gray-900"}`}>
                           {f.label}
                         </span>
-                        {f.h && <Badge className="bg-primary text-primary-foreground">Prêmio Principal</Badge>}
+                        {f.h && (
+                          <Badge className="bg-primary text-primary-foreground text-xs">
+                            Prêmio Principal
+                          </Badge>
+                        )}
                       </div>
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
-                          <p className="text-muted-foreground">Ganhadores</p>
-                          <p className="font-semibold">
+                          <p className="text-muted-foreground text-xs">Ganhadores</p>
+                          <p className="font-bold text-lg">
                             {Number(f.g || 0).toLocaleString("pt-BR")}
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="text-muted-foreground">Prêmio</p>
-                          <p className={`font-bold text-lg ${f.h ? "text-primary" : "text-gray-700"}`}>
+                          <p className="text-muted-foreground text-xs">Prêmio</p>
+                          <p className={`font-bold text-xl ${f.h ? "text-primary" : "text-gray-800"}`}>
                             {formatarMoeda(f.v)}
                           </p>
                         </div>
