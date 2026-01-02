@@ -1,35 +1,53 @@
 import axios from "axios";
 
+/**
+ * URL base da API. Prioriza a variável de ambiente do Vite, 
+ * caso contrário utiliza a URL padrão da Vercel.
+ */
 const API_URL = (
   import.meta.env.VITE_API_URL ||
   "https://palpiteiro-backend.vercel.app"
 ).replace(/\/$/, "");
 
+/**
+ * Instância do Axios com configurações globais.
+ * Nota: Certifique-se de injetar o 'X-User-Id' nos headers caso use autenticação.
+ */
 export const api = axios.create({
   baseURL: API_URL,
-  // Podemos voltar o timeout para 15s, já que o backend será rápido agora
   timeout: 15000, 
-  headers: { "Content-Type": "application/json" },
+  headers: { 
+    "Content-Type": "application/json"
+  },
 });
 
 /* =====================
    ESTATÍSTICAS
 ===================== */
+
+/**
+ * Busca estatísticas baseadas nos cálculos pre-calculados do banco.
+ */
 export const getEstatisticasScore = async () => {
   const resp = await api.get("/estatisticas/base");
-  // Esta rota agora leria a tabela do Supabase com as estatísticas pre-calculadas
   return resp.data;
 };
 
 /* =====================
-   PALPITES (Backend Rápido - Sem Cache no Front)
+   PALPITES
 ===================== */
-// Estas funções apenas leem a tabela de palpites pre-calculados no Supabase
+
+/**
+ * Busca um palpite fixo gerado pelo algoritmo.
+ */
 export const getPalpiteFixo = async () => {
   const resp = await api.get("/palpites/fixo");
   return resp.data;
 };
 
+/**
+ * Busca a lista de 7 palpites estatísticos.
+ */
 export const getPalpitesEstatisticos = async () => {
   const resp = await api.get("/palpites/estatisticos");
   return resp.data;
@@ -37,44 +55,53 @@ export const getPalpitesEstatisticos = async () => {
 
 
 /* =====================
-   CONCURSO / HISTÓRICO COM CACHE (Mantido para UX)
+   RESULTADOS / CONCURSOS (PARA O COMPONENTE RESULTADOS.TSX)
 ===================== */
-export const getUltimoConcurso = async () => {
-  const CACHE_KEY = "palpiteiro_concurso_cache";
-  const TIMESTAMP_KEY = "palpiteiro_cache_time";
-  const TRINTA_MINUTOS = 30 * 60 * 1000;
 
-  try {
-    const cached = localStorage.getItem(CACHE_KEY);
-    const lastFetch = localStorage.getItem(TIMESTAMP_KEY);
-    const agora = Date.now();
-
-    if (cached && lastFetch && (agora - Number(lastFetch) < TRINTA_MINUTOS)) {
-      return JSON.parse(cached);
-    }
-
-    const resp = await api.get("/ultimos/1");
-    // ... lógica de cache ...
-    return resp.data.concursos?.[0] || resp.data;
-  } catch (error) {
-    const fallback = localStorage.getItem(CACHE_KEY);
-    if (fallback) return JSON.parse(fallback);
-    throw error;
-  }
+/**
+ * Busca os últimos N concursos.
+ * O Backend retorna uma Lista direta: [ {concurso: 1, dezenas: []}, ... ]
+ */
+export const getUltimosConcursos = async (quantidade: number = 50) => {
+  const resp = await api.get(`/ultimos/${quantidade}`);
+  return resp.data;
 };
 
+/**
+ * Busca os dados de um concurso específico pelo seu número.
+ */
+export const getConcurso = async (id: number) => {
+  const resp = await api.get(`/concurso/${id}`);
+  return resp.data;
+};
+
+/**
+ * Busca o concurso mais recente disponível.
+ */
+export const getUltimoConcurso = async () => {
+  const resp = await api.get("/ultimos/1");
+  // Como o backend retorna uma lista, pegamos o primeiro item se for array
+  return Array.isArray(resp.data) ? resp.data[0] : resp.data;
+};
+
+/* =====================
+   HISTÓRICO DO USUÁRIO
+===================== */
+
+/**
+ * Lista o histórico de jogos do usuário autenticado.
+ * Importante: O frontend deve enviar o header X-User-Id na requisição.
+ */
 export const getHistorico = async () => {
   const resp = await api.get("/historico/");
   return resp.data;
 };
 
-export const postSalvarPalpite = async (numeros: number[]) => {
-  const resp = await api.post("/historico/registrar", {
-    id: crypto.randomUUID(),
-    data: new Date().toISOString(),
-    tipo: "estatistico",
-    numeros,
-    valor_aposta: 3,
-  });
+/**
+ * Salva um novo palpite no histórico do usuário.
+ */
+export const postSalvarPalpite = async (payload: any) => {
+  // Rota corrigida para bater com o router.post("/") do backend
+  const resp = await api.post("/historico/", payload);
   return resp.data;
 };
