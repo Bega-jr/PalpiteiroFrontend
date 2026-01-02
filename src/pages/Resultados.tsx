@@ -1,30 +1,15 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import { Layout } from "@/components/Layout";
 import { ConcursoCard } from "@/components/ConcursoCard";
 import { LoadingList } from "@/components/LoadingStates";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { api } from "@/lib/api";
 import { Trophy, Search, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
+import { parse } from "papaparse";
 
-/**
- * Interface baseada no formato real da API oficial da Caixa para Lotofácil:
- * - numeroConcurso
- * - dataApuracao (ex: "01/01/2026")
- * - listaDezenas (array de strings como "01", "02", ...)
- */
-interface ConcursoCaixa {
-  numeroConcurso: number;
-  dataApuracao: string;
-  listaDezenas: string[];
-}
-
-/**
- * Interface que o ConcursoCard espera (mantida para compatibilidade)
- */
-interface ConcursoFrontend {
+// Interface que o ConcursoCard espera
+interface Concurso {
   concurso: number;
   data: string; // "YYYY-MM-DD"
   dezenas: number[];
@@ -33,41 +18,56 @@ interface ConcursoFrontend {
 export default function Resultados() {
   const [searchConcurso, setSearchConcurso] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [allConcursos, setAllConcursos] = useState<Concurso[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const itemsPerPage = 10;
 
-  // Lista dos últimos 50 concursos (assume que seu backend já retorna no formato correto)
-  const { data: ultimosConcursos, isLoading: loadingLista, isError: errorLista } = useQuery<ConcursoFrontend[]>({
-    queryKey: ["ultimosConcursos", 50],
-    queryFn: () => api.getUltimosConcursos(50),
-    staleTime: 1000 * 60 * 5,
-  });
+  // Carrega e parseia o CSV uma única vez
+  useEffect(() => {
+    parse("/data/Lotofacil.CSV", {
+      download: true,
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        const concursos: Concurso[] = results.data
+          .filter((row: any) => row.loteria === "lotofacil" && row.concurso)
+          .map((row: any) => {
+            const bolas = [
+              row.bola1, row.bola2, row.bola3, row.bola4, row.bola5,
+              row.bola6, row.bola7, row.bola8, row.bola9, row.bola10,
+              row.bola11, row.bola12, row.bola13, row.bola14, row.bola15,
+            ]
+              .map(Number)
+              .filter(n => !isNaN(n))
+              .sort((a, b) => a - b);
 
-  // Busca por concurso específico - agora com mapeamento do formato real da Caixa
-  const { data: concursoBuscadoRaw, isLoading: loadingBusca, isError: errorBusca } = useQuery<ConcursoCaixa | undefined>({
-    queryKey: ["concurso", searchConcurso],
-    queryFn: async () => {
-      const num = parseInt(searchConcurso);
-      if (isNaN(num)) return undefined;
-      const response = await fetch(`https://servicebus2.caixa.gov.br/portaldeloterias/api/lotofacil/${num}`);
-      if (!response.ok) throw new Error("Não encontrado");
-      return response.json();
-    },
-    enabled: !!searchConcurso && !isNaN(parseInt(searchConcurso)),
-    retry: false,
-  });
+            return {
+              concurso: Number(row.concurso),
+              data: row.data, // já vem no formato YYYY-MM-DD
+              dezenas: bolas,
+            };
+          })
+          // Ordena do mais recente para o mais antigo
+          .sort((a, b) => b.concurso - a.concurso);
 
-  // Mapeia para o formato esperado pelo ConcursoCard
-  const concursoBuscado: ConcursoFrontend | undefined = concursoBuscadoRaw
-    ? {
-        concurso: concursoBuscadoRaw.numeroConcurso,
-        data: concursoBuscadoRaw.dataApuracao.split("/").reverse().join("-"), // "DD/MM/YYYY" → "YYYY-MM-DD"
-        dezenas: concursoBuscadoRaw.listaDezenas.map(Number).sort((a, b) => a - b),
-      }
+        setAllConcursos(concursos);
+        setIsLoading(false);
+      },
+      error: (error) => {
+        console.error("Erro ao carregar CSV:", error);
+        setIsLoading(false);
+      },
+    });
+  }, []);
+
+  // Busca específica
+  const concursoBuscado = searchConcurso
+    ? allConcursos.find(c => c.concurso === parseInt(searchConcurso))
     : undefined;
 
-  const concursos = Array.isArray(ultimosConcursos) ? ultimosConcursos : [];
-  const totalPages = Math.ceil(concursos.length / itemsPerPage);
-  const paginatedConcursos = concursos.slice(
+  // Lista paginada (últimos resultados)
+  const totalPages = Math.ceil(allConcursos.length / itemsPerPage);
+  const paginatedConcursos = allConcursos.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
@@ -92,6 +92,7 @@ export default function Resultados() {
           </div>
         </div>
       </section>
+
       <div className="container py-8 md:py-12 space-y-8">
         {/* Busca por Concurso */}
         <Card>
@@ -106,7 +107,7 @@ export default function Resultados() {
                   className="w-full"
                 />
               </div>
-              <Button type="submit" disabled={!searchConcurso || loadingBusca}>
+              <Button type="submit" disabled={!searchConcurso}>
                 <Search className="mr-2 h-4 w-4" />
                 Buscar
               </Button>
@@ -121,17 +122,10 @@ export default function Resultados() {
               <Trophy className="h-5 w-5 text-lottery-gold" />
               Resultado do Concurso {searchConcurso}
             </h2>
-            {loadingBusca ? (
+            {isLoading ? (
               <Card>
                 <CardContent className="p-6 text-center text-muted-foreground">
-                  Buscando...
-                </CardContent>
-              </Card>
-            ) : errorBusca ? (
-              <Card>
-                <CardContent className="p-6 text-center text-destructive flex items-center justify-center gap-2">
-                  <AlertCircle className="h-4 w-4" />
-                  Concurso não encontrado.
+                  Carregando...
                 </CardContent>
               </Card>
             ) : concursoBuscado ? (
@@ -142,8 +136,9 @@ export default function Resultados() {
               />
             ) : (
               <Card>
-                <CardContent className="p-6 text-center text-muted-foreground">
-                  Nenhum resultado encontrado.
+                <CardContent className="p-6 text-center text-destructive flex items-center justify-center gap-2">
+                  <AlertCircle className="h-4 w-4" />
+                  Concurso não encontrado.
                 </CardContent>
               </Card>
             )}
@@ -156,15 +151,9 @@ export default function Resultados() {
             <Trophy className="h-5 w-5 text-primary" />
             Últimos Resultados
           </h2>
-          {loadingLista ? (
+
+          {isLoading ? (
             <LoadingList />
-          ) : errorLista ? (
-            <Card>
-              <CardContent className="p-6 text-center text-destructive flex items-center justify-center gap-2">
-                <AlertCircle className="h-4 w-4" />
-                Erro ao carregar a lista de concursos.
-              </CardContent>
-            </Card>
           ) : paginatedConcursos.length > 0 ? (
             <>
               <div className="space-y-3">
@@ -178,6 +167,7 @@ export default function Resultados() {
                   />
                 ))}
               </div>
+
               {/* Paginação */}
               {totalPages > 1 && (
                 <div className="flex items-center justify-center gap-4 mt-8">
@@ -194,9 +184,7 @@ export default function Resultados() {
                   </span>
                   <Button
                     variant="outline"
-                    onClick={() =>
-                      setCurrentPage((p) => Math.min(totalPages, p + 1))
-                    }
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages}
                   >
                     Próxima
