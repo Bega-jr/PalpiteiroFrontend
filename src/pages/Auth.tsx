@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { supabase } from "@/lib/supabase";
 
 export default function Auth() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const initialMode = searchParams.get("mode") === "signup" ? "signup" : "login";
   const [activeTab, setActiveTab] = useState(initialMode);
   const { toast } = useToast();
@@ -26,17 +27,25 @@ export default function Auth() {
   const [forgotEmail, setForgotEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Função para salvar token localmente (para usar no cache/session do backend)
+  const saveToken = (token: string) => {
+    localStorage.setItem("authToken", token);
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!loginForm.email || !loginForm.password) {
       toast({ title: "Erro", description: "Preencha email e senha.", variant: "destructive" });
       return;
     }
+
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
+
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: loginForm.email.trim(),
       password: loginForm.password,
     });
+
     setLoading(false);
 
     if (error) {
@@ -47,9 +56,14 @@ export default function Auth() {
           : error.message,
         variant: "destructive",
       });
-    } else {
+    } else if (data.session?.access_token) {
+      // Salva o token local
+      saveToken(data.session.access_token);
+
       toast({ title: "Sucesso!", description: "Login realizado com sucesso." });
-      window.location.href = "/historico";
+      navigate("/historico"); // redireciona para página protegida
+    } else {
+      toast({ title: "Erro", description: "Falha ao autenticar.", variant: "destructive" });
     }
   };
 
@@ -63,23 +77,22 @@ export default function Auth() {
       toast({ title: "Erro", description: "Preencha todos os campos.", variant: "destructive" });
       return;
     }
+
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+
+    const { data, error } = await supabase.auth.signUp({
       email: signupForm.email.trim(),
       password: signupForm.password,
       options: {
         data: { name: signupForm.name.trim() },
-        emailRedirectTo: window.location.origin, // Redireciona de volta pro site após confirmar email
+        emailRedirectTo: window.location.origin, // Redireciona de volta após confirmar email
       },
     });
+
     setLoading(false);
 
     if (error) {
-      toast({
-        title: "Erro ao cadastrar",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Erro ao cadastrar", description: error.message, variant: "destructive" });
     } else {
       toast({
         title: "Cadastro realizado!",
@@ -96,9 +109,10 @@ export default function Auth() {
       toast({ title: "Erro", description: "Digite seu email.", variant: "destructive" });
       return;
     }
+
     setLoading(true);
     const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail.trim(), {
-      redirectTo: window.location.origin + "/auth", // Volta pra página de auth após clicar no link
+      redirectTo: window.location.origin + "/auth",
     });
     setLoading(false);
 
@@ -128,9 +142,7 @@ export default function Auth() {
               <div className="w-16 h-16 bg-primary rounded-xl flex items-center justify-center mx-auto mb-4">
                 <Clover className="h-8 w-8 text-primary-foreground" />
               </div>
-              <CardTitle className="font-display text-2xl">
-                Bem-vindo ao Palpiteiro
-              </CardTitle>
+              <CardTitle className="font-display text-2xl">Bem-vindo ao Palpiteiro</CardTitle>
             </CardHeader>
             <CardContent>
               <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -259,7 +271,9 @@ export default function Auth() {
                           placeholder="••••••••"
                           className="pl-10"
                           value={signupForm.confirmPassword}
-                          onChange={(e) => setSignupForm({ ...signupForm, confirmPassword: e.target.value })}
+                          onChange={(e) =>
+                            setSignupForm({ ...signupForm, confirmPassword: e.target.value })
+                          }
                           required
                           disabled={loading}
                         />
@@ -281,3 +295,4 @@ export default function Auth() {
     </Layout>
   );
 }
+
