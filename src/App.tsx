@@ -11,6 +11,8 @@ import Resultados from "./pages/Resultados";
 import Historico from "./pages/Historico";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+// Importe o componente de debug
+import DebugApiPage from "./pages/DebugApiPage";
 
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
@@ -33,8 +35,17 @@ const App = () => (
           {/* Páginas públicas */}
           <Route path="/" element={<Home />} />
           <Route path="/auth" element={<Auth />} />
+          {/* Adicione a rota de debug aqui */}
+          <Route path="/debug-api" element={<DebugApiPage />} />
 
-          {/* Páginas privadas */}
+          {/* 
+            [IMPORTANTE] A rota de Resultados provavelmente deveria ser pública. 
+            Mova-a para cá se você não quiser exigir login para ver os resultados.
+          */}
+          {/* <Route path="/resultados" element={<Resultados />} /> */}
+
+
+          {/* Páginas privadas (requerem login) */}
           <Route
             path="/palpites"
             element={
@@ -77,3 +88,4 @@ const App = () => (
 );
 
 export default App;
+
