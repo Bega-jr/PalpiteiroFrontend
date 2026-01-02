@@ -16,50 +16,51 @@ interface Concurso {
   dezenas: number[];
 }
 
-async function fetchUltimos(quantidade: number = 50): Promise<Concurso[]> {
-  const res = await fetch(`${BASE_URL}/ultimos/${quantidade}`);
-  if (!res.ok) throw new Error("Erro ao carregar últimos concursos");
-  return res.json(); // Retorna array direto
-}
-
-async function fetchConcurso(numero: number): Promise<Concurso | null> {
-  const res = await fetch(`${BASE_URL}/concurso/${numero}`);
-  if (!res.ok) {
-    if (res.status === 404) return null;
-    throw new Error("Erro ao buscar concurso");
-  }
-  return res.json(); // Retorna objeto plano {concurso, data, dezenas}
-}
-
 export default function Resultados() {
   const [searchConcurso, setSearchConcurso] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-  const quantidadeLista = 50; // Ajuste para 10 se preferir menos
+  const quantidade = 50;
 
+  // Últimos concursos
   const {
     data: ultimosConcursos = [],
     isLoading: loadingLista,
     isError: errorLista,
   } = useQuery<Concurso[]>({
-    queryKey: ["ultimosConcursos", quantidadeLista],
-    queryFn: () => fetchUltimos(quantidadeLista),
-    staleTime: 5 * 60 * 1000, // Cache de 5 minutos
+    queryKey: ["ultimosConcursos", quantidade],
+    queryFn: async () => {
+      const res = await fetch(`${BASE_URL}/ultimos/${quantidade}`);
+      if (!res.ok) throw new Error("Erro ao carregar últimos concursos");
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
   });
 
+  // Busca por concurso específico
   const {
     data: concursoBuscado,
     isLoading: loadingBusca,
     isError: errorBusca,
   } = useQuery<Concurso | null>({
     queryKey: ["concurso", searchConcurso],
-    queryFn: () => fetchConcurso(parseInt(searchConcurso)),
-    enabled: !!searchConcurso && !isNaN(parseInt(searchConcurso)),
+    queryFn: async () => {
+      const num = parseInt(searchConcurso);
+      if (isNaN(num)) return null;
+      const res = await fetch(`${BASE_URL}/concurso/${num}`);
+      if (!res.ok) {
+        if (res.status === 404) return null;
+        throw new Error("Erro ao buscar concurso");
+      }
+      return res.json();
+    },
+    enabled: searchConcurso.length > 0 && !isNaN(parseInt(searchConcurso)),
     retry: false,
   });
 
-  const totalPages = Math.ceil(ultimosConcursos.length / itemsPerPage);
-  const paginatedConcursos = ultimosConcursos.slice(
+  const concursos = ultimosConcursos;
+  const totalPages = Math.ceil(concursos.length / itemsPerPage);
+  const paginatedConcursos = concursos.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
@@ -70,6 +71,7 @@ export default function Resultados() {
 
   return (
     <Layout>
+      {/* Header */}
       <section className="gradient-hero text-primary-foreground py-12 md:py-16">
         <div className="container">
           <div className="max-w-2xl">
@@ -143,7 +145,7 @@ export default function Resultados() {
           </section>
         )}
 
-        {/* Lista de Últimos Resultados */}
+        {/* Lista de Concursos */}
         <section>
           <h2 className="font-display text-xl font-bold mb-4 flex items-center gap-2">
             <Trophy className="h-5 w-5 text-primary" />
@@ -158,7 +160,7 @@ export default function Resultados() {
                 Erro ao carregar a lista de concursos.
               </CardContent>
             </Card>
-          ) : paginatedConcursos.length > 0 ? (
+          ) : (
             <>
               <div className="space-y-3">
                 {paginatedConcursos.map((concurso) => (
@@ -171,6 +173,7 @@ export default function Resultados() {
                   />
                 ))}
               </div>
+              {/* Paginação */}
               {totalPages > 1 && (
                 <div className="flex items-center justify-center gap-4 mt-8">
                   <Button
@@ -186,7 +189,9 @@ export default function Resultados() {
                   </span>
                   <Button
                     variant="outline"
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    onClick={() =>
+                      setCurrentPage((p) => Math.min(totalPages, p + 1))
+                    }
                     disabled={currentPage === totalPages}
                   >
                     Próxima
@@ -195,12 +200,6 @@ export default function Resultados() {
                 </div>
               )}
             </>
-          ) : (
-            <Card>
-              <CardContent className="p-6 text-center text-muted-foreground">
-                Nenhum resultado disponível no momento.
-              </CardContent>
-            </Card>
           )}
         </section>
       </div>
