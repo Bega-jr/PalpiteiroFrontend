@@ -12,6 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+// Importação corrigida para usar a função getEstatisticasScore nomeada
+import { getEstatisticasScore } from "@/lib/api"; 
 import {
   BarChart,
   Bar,
@@ -19,178 +21,231 @@ import {
   YAxis,
   ResponsiveContainer,
   Cell,
-  Tooltip,
-  CartesianGrid
+  Tooltip
 } from "recharts";
-import { BarChart3, TrendingUp, Clock, Zap, Target, Info } from "lucide-react";
-import { api } from "@/lib/api";
+import { BarChart3, TrendingUp, Clock, Zap, Target, Hash } from "lucide-react";
+
+/* =====================
+   TIPOS CORRETOS (Adicionados aqui para completar o arquivo)
+===================== */
+type AnaliseGeral = {
+  soma_media: number;
+  pares_media: number;
+  impares_media: number;
+  primos_media: number;
+  data_referencia: string;
+};
+
+type NumeroStats = {
+  numero: number;
+  frequencia: number;
+  atraso: number;
+  score: number;
+};
+
+type Ciclo = {
+  faltam: number[];
+  total_faltam: number;
+};
+
+type EstatisticasResponse = {
+  estatisticas: NumeroStats[];
+  analise: AnaliseGeral;
+  ciclo: Ciclo;
+  meta: {
+    data_referencia: string;
+    total_numeros: number;
+    fonte: string;
+  };
+};
+
 
 export default function Estatisticas() {
-  const { data, isLoading, error } = useQuery({
+  // Tipagem adicionada ao useQuery para melhor segurança
+  const { data: estatisticas, isLoading } = useQuery<EstatisticasResponse>({
     queryKey: ["estatisticasScore"],
-    queryFn: () => api.getEstatisticasScore(),
-    refetchOnWindowFocus: false
+    queryFn: getEstatisticasScore, // Uso direto da função importada
   });
 
-  if (isLoading) return <LoadingStats />;
-  
-  if (error || !data) {
+  if (isLoading) {
     return (
       <Layout>
-        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-          <Info className="h-12 w-12 text-destructive" />
-          <h2 className="text-xl font-bold">Não foi possível carregar as estatísticas</h2>
-          <p className="text-muted-foreground">Verifique a conexão com o banco de dados Supabase.</p>
-        </div>
+        <section className="gradient-hero text-primary-foreground py-12 md:py-16">
+          <div className="container">
+            <h1 className="font-display text-3xl md:text-4xl font-bold mb-4 text-white">Estatísticas</h1>
+            <LoadingStats />
+          </div>
+        </section>
       </Layout>
     );
   }
 
-  // Mapeamento direto dos dados do seu Python
-  const { estatisticas, analise, ciclo, meta } = data;
+  const stats = estatisticas?.estatisticas || [];
+  const ciclo = estatisticas?.ciclo;
+  const analise = estatisticas?.analise;
+
+  // Ordenações para os gráficos
+  const sortedByScore = [...stats].sort((a, b) => b.score - a.score);
+  const top10 = sortedByScore.slice(0, 10);
+
+  const frequenciaData = [...stats]
+    .sort((a, b) => a.numero - b.numero)
+    .map((s) => ({
+      numero: s.numero.toString().padStart(2, "0"),
+      frequencia: s.frequencia,
+      isTop: top10.some((t) => t.numero === s.numero),
+    }));
 
   return (
     <Layout>
-      <div className="container mx-auto p-4 md:p-8 space-y-8">
-        
-        {/* CABEÇALHO COM INFO DE ATUALIZAÇÃO */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b pb-6 gap-4">
-          <div>
-            <h1 className="text-4xl font-extrabold tracking-tight">Análise Inteligente</h1>
-            <p className="text-muted-foreground mt-1">
-              Última extração: <span className="font-medium text-primary">{analise.data_referencia}</span>
+      {/* Header */}
+      <section className="gradient-hero text-primary-foreground py-12 md:py-16">
+        <div className="container text-white">
+          <div className="max-w-2xl">
+            <h1 className="font-display text-3xl md:text-4xl font-bold mb-2">
+              Análise Estatística
+            </h1>
+            <p className="text-white/80">
+              Referência: {analise?.data_referencia}
             </p>
           </div>
-          <Badge variant="outline" className="text-xs uppercase tracking-widest px-3 py-1">
-            Fonte: {meta.fonte}
-          </Badge>
         </div>
+      </section>
 
-        {/* 1. CARDS DE RESUMO (MÉDIAS) */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="Soma Média" value={analise.soma_media} icon={<Target />} color="bg-blue-500/10 text-blue-600" />
-          <StatCard title="Média Pares" value={analise.pares_media} icon={<TrendingUp />} color="bg-green-500/10 text-green-600" />
-          <StatCard title="Média Ímpares" value={analise.impares_media} icon={<TrendingUp />} color="bg-orange-500/10 text-orange-600" />
-          <StatCard title="Média Primos" value={analise.primos_media} icon={<Zap />} color="bg-yellow-500/10 text-yellow-600" />
-        </div>
+      <div className="container py-8 md:py-12 space-y-8">
+        
+        {/* BLOCO 1: CARDS DE RESUMO (Incluindo Primos) */}
+        {analise && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2 uppercase font-semibold">
+                  <TrendingUp className="h-4 w-4" /> Soma Média
+                </div>
+                <div className="text-2xl font-bold">{analise.soma_media}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2 uppercase font-semibold">
+                  <Hash className="h-4 w-4" /> Pares
+                </div>
+                <div className="text-2xl font-bold">{analise.pares_media}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2 uppercase font-semibold">
+                  <Hash className="h-4 w-4" /> Ímpares
+                </div>
+                <div className="text-2xl font-bold">{analise.impares_media}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2 uppercase font-semibold">
+                  <Zap className="h-4 w-4" /> Primos
+                </div>
+                <div className="text-2xl font-bold">{analise.primos_media}</div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-          
-          {/* 2. CICLO / NÚMEROS PENDENTES */}
-          <Card className="xl:col-span-1 shadow-sm border-2">
-            <CardHeader className="bg-muted/30">
-              <CardTitle className="flex items-center gap-2 text-base uppercase tracking-wider">
-                <Clock className="h-5 w-5" /> Ciclo Atual (Faltantes)
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="flex flex-wrap gap-2 min-h-[100px]">
-                {ciclo.faltam && ciclo.faltam.length > 0 ? (
-                  ciclo.faltam.map((num: number) => (
-                    <LotteryBall key={num} number={num} variant="highlight" size="md" />
-                  ))
-                ) : (
-                  <div className="flex items-center justify-center w-full bg-green-50 rounded-lg border border-green-100 p-4">
-                    <p className="text-green-700 font-medium">Ciclo finalizado! 🎯</p>
-                  </div>
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground mt-6 text-center italic">
-                {ciclo.total_faltam} números restantes para completar o ciclo.
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* 3. GRÁFICO DE SCORE (O MELHOR VISUAL) */}
-          <Card className="xl:col-span-2 shadow-sm border-2">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base uppercase tracking-wider">
-                <BarChart3 className="h-5 w-5" /> Tendência de Performance (Score)
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="h-[300px] w-full pr-4">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={estatisticas.slice(0, 15)}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
-                  <XAxis dataKey="numero" axisLine={false} tickLine={false} />
-                  <YAxis axisLine={false} tickLine={false} />
-                  <Tooltip 
-                    cursor={{ fill: '#f1f5f9' }} 
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        return (
-                          <div className="bg-white p-3 border rounded-lg shadow-xl">
-                            <p className="font-bold text-lg">Bola {payload[0].payload.numero}</p>
-                            <p className="text-sm text-primary">Score: {payload[0].value?.toFixed(4)}</p>
-                            <p className="text-xs text-muted-foreground">Atraso: {payload[0].payload.atraso}</p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Bar dataKey="score" radius={[4, 4, 0, 0]}>
-                    {estatisticas.slice(0, 15).map((entry: any, index: number) => (
-                      <Cell key={`cell-${index}`} fill={index < 3 ? "hsl(var(--primary))" : "#94a3b8"} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* 4. TABELA DETALHADA (TODO O RESTO) */}
-        <Card className="border-2 overflow-hidden shadow-md">
-          <CardHeader className="border-b bg-muted/20">
-            <CardTitle className="text-lg">Ranking Geral Detalhado</CardTitle>
+        {/* BLOCO 2: CICLO ATUAL (Visual com Bolinhas) */}
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-primary" /> Ciclo Atual
+            </CardTitle>
           </CardHeader>
-          <Table>
-            <TableHeader className="bg-muted/10">
-              <TableRow>
-                <TableHead className="w-24 text-center">Nº</TableHead>
-                <TableHead>Frequência Total</TableHead>
-                <TableHead>Atraso Atual</TableHead>
-                <TableHead className="text-right">Score de Força</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {estatisticas.map((n: any) => (
-                <TableRow key={n.numero} className="hover:bg-muted/30 transition-colors">
-                  <TableCell className="text-center py-3">
-                    <LotteryBall number={n.numero} size="sm" />
-                  </TableCell>
-                  <TableCell className="font-medium text-muted-foreground">{n.frequencia}x</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <span className={n.atraso > 5 ? "text-destructive font-bold" : ""}>{n.atraso}</span>
-                      {n.atraso > 8 && <Badge variant="destructive" className="h-4 px-1 text-[10px]">CRÍTICO</Badge>}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right font-mono font-bold text-primary">
-                    {n.score.toFixed(6)}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              Números que ainda não foram sorteados neste ciclo:
+            </p>
+            <div className="flex flex-wrap gap-3">
+              {ciclo?.faltam?.length ? (
+                ciclo.faltam.map((num) => (
+                  <LotteryBall key={num} number={num} variant="outline" />
+                ))
+              ) : (
+                <Badge variant="secondary" className="text-lg py-1 px-4">🎯 Ciclo Completo!</Badge>
+              )}
+            </div>
+            <div className="mt-4 text-xs font-medium text-muted-foreground">
+              TOTAL PENDENTE: {ciclo?.total_faltam}
+            </div>
+          </CardContent>
         </Card>
 
+        {/* BLOCO 3: GRÁFICO DE FREQUÊNCIA */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" /> Frequência por Dezena
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={frequenciaData}>
+                <XAxis dataKey="numero" />
+                <YAxis />
+                <Tooltip 
+                  cursor={{fill: 'transparent'}}
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                />
+                <Bar dataKey="frequencia">
+                  {frequenciaData.map((entry, index) => (
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={entry.isTop ? "hsl(var(--primary))" : "hsl(var(--muted-foreground)/0.3)"} 
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* BLOCO 4: TABELA DETALHADA */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5" /> Estatísticas Detalhadas
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[100px]">Dezena</TableHead>
+                  <TableHead>Frequência</TableHead>
+                  <TableHead>Atraso Atual</TableHead>
+                  <TableHead className="text-right">Score de Força</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sortedByScore.map((n) => (
+                  <TableRow key={n.numero}>
+                    <TableCell className="font-bold">
+                      <LotteryBall number={n.numero} size="sm" />
+                    </TableCell>
+                    <TableCell>{n.frequencia}x</TableCell>
+                    <TableCell>
+                      <Badge variant={n.atraso > 4 ? "destructive" : "secondary"}>
+                        {n.atraso} {n.atraso === 1 ? 'concurso' : 'concursos'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right font-mono font-semibold text-primary">
+                      {n.score.toFixed(3)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       </div>
     </Layout>
-  );
-}
-
-function StatCard({ title, value, icon, color }: { title: string; value: number; icon: React.ReactNode; color: string }) {
-  return (
-    <Card className="border-2 shadow-sm transition-all hover:scale-[1.02]">
-      <CardContent className="p-4 flex items-center gap-4">
-        <div className={`p-3 rounded-xl ${color}`}>{icon}</div>
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-tighter">{title}</p>
-          <p className="text-2xl font-black">{value}</p>
-        </div>
-      </CardContent>
-    </Card>
   );
 }
