@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getEstatisticasScore } from "@/lib/api"; 
+import { getEstatisticasScore } from "@/lib/api";
 import {
   BarChart,
   Bar,
@@ -20,9 +20,16 @@ import {
   YAxis,
   ResponsiveContainer,
   Cell,
-  Tooltip
+  Tooltip,
 } from "recharts";
-import { BarChart3, TrendingUp, Clock, Zap, Target, Hash } from "lucide-react";
+import {
+  BarChart3,
+  TrendingUp,
+  Clock,
+  Zap,
+  Target,
+  Hash,
+} from "lucide-react";
 
 /* =====================
    TIPOS
@@ -59,9 +66,11 @@ type EstatisticasResponse = {
 };
 
 export default function Estatisticas() {
-  const { data: estatisticas, isLoading, isError } = useQuery<EstatisticasResponse>({
+  const { data: estatisticas, isLoading } = useQuery<EstatisticasResponse>({
     queryKey: ["estatisticasScore"],
     queryFn: getEstatisticasScore,
+    staleTime: 1000 * 60 * 10,
+    retry: 2,
   });
 
   if (isLoading) {
@@ -69,7 +78,9 @@ export default function Estatisticas() {
       <Layout>
         <section className="gradient-hero text-primary-foreground py-12 md:py-16">
           <div className="container">
-            <h1 className="font-display text-3xl md:text-4xl font-bold mb-4 text-white">Carregando Estatísticas...</h1>
+            <h1 className="font-display text-3xl md:text-4xl font-bold mb-4 text-white">
+              Estatísticas
+            </h1>
             <LoadingStats />
           </div>
         </section>
@@ -77,21 +88,16 @@ export default function Estatisticas() {
     );
   }
 
-  if (isError || !estatisticas) {
-    return (
-      <Layout>
-        <div className="container py-20 text-center">
-          <h2 className="text-2xl font-bold text-destructive">Erro ao carregar dados</h2>
-          <p className="text-muted-foreground">O backend não respondeu conforme o esperado.</p>
-        </div>
-      </Layout>
-    );
-  }
+  const stats: NumeroStats[] = Array.isArray(estatisticas?.estatisticas)
+    ? estatisticas.estatisticas
+    : [];
 
-  const stats = estatisticas.estatisticas || [];
-  const ciclo = estatisticas.ciclo;
-  const analise = estatisticas.analise;
+  const ciclo = estatisticas?.ciclo;
+  const analise = estatisticas?.analise;
 
+  /* =====================
+     DADOS DERIVADOS
+  ===================== */
   const sortedByScore = [...stats].sort((a, b) => b.score - a.score);
   const top10 = sortedByScore.slice(0, 10);
 
@@ -105,6 +111,7 @@ export default function Estatisticas() {
 
   return (
     <Layout>
+      {/* HEADER */}
       <section className="gradient-hero text-primary-foreground py-12 md:py-16">
         <div className="container text-white">
           <div className="max-w-2xl">
@@ -112,106 +119,178 @@ export default function Estatisticas() {
               Análise Estatística
             </h1>
             <p className="text-white/80">
-              Referência: {analise?.data_referencia} | Total: {estatisticas.meta.total_numeros} dezenas
+              Referência: {analise?.data_referencia}
             </p>
           </div>
         </div>
       </section>
 
       <div className="container py-8 md:py-12 space-y-8">
-        
-        {/* BLOCO 1: CARDS DE RESUMO */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatMiniCard title="Soma Média" value={analise.soma_media} icon={<Target />} />
-          <StatMiniCard title="Pares" value={analise.pares_media} icon={<Hash />} />
-          <StatMiniCard title="Ímpares" value={analise.impares_media} icon={<Hash />} />
-          <StatMiniCard title="Primos" value={analise.primos_media} icon={<Zap />} />
-        </div>
 
-        {/* BLOCO 2: CICLO ATUAL */}
+        {/* BLOCO 1 — RESUMO */}
+        {analise && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <ResumoCard
+              icon={<TrendingUp className="h-4 w-4" />}
+              label="Soma Média"
+              value={analise.soma_media}
+            />
+            <ResumoCard
+              icon={<Hash className="h-4 w-4" />}
+              label="Pares"
+              value={analise.pares_media}
+            />
+            <ResumoCard
+              icon={<Hash className="h-4 w-4" />}
+              label="Ímpares"
+              value={analise.impares_media}
+            />
+            <ResumoCard
+              icon={<Zap className="h-4 w-4" />}
+              label="Primos"
+              value={analise.primos_media}
+            />
+          </div>
+        )}
+
+        {/* BLOCO 2 — CICLO */}
         <Card className="border-primary/20 bg-primary/5">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-primary" /> Ciclo Atual
+              <Clock className="h-5 w-5 text-primary" />
+              Ciclo Atual
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-3 mb-4">
+            <p className="text-sm text-muted-foreground mb-4">
+              Números que ainda não foram sorteados neste ciclo:
+            </p>
+
+            <div className="flex flex-wrap gap-3">
               {ciclo?.faltam?.length ? (
                 ciclo.faltam.map((num) => (
-                  <LotteryBall key={num} number={num} variant="outline" />
+                  <LotteryBall
+                    key={num}
+                    number={num}
+                    variant="outline"
+                  />
                 ))
               ) : (
-                <Badge className="bg-green-500">🎯 Ciclo Completo!</Badge>
+                <Badge variant="secondary" className="text-lg py-1 px-4">
+                  🎯 Ciclo Completo!
+                </Badge>
               )}
             </div>
-            <p className="text-xs font-medium text-muted-foreground uppercase">
-              TOTAL PENDENTE: {ciclo?.total_faltam}
-            </p>
+
+            <div className="mt-4 text-xs font-medium text-muted-foreground">
+              TOTAL PENDENTE: {ciclo?.total_faltam ?? 0}
+            </div>
           </CardContent>
         </Card>
 
-        {/* BLOCO 3: GRÁFICO */}
+        {/* BLOCO 3 — GRÁFICO */}
         <Card>
-          <CardHeader><CardTitle>Frequência por Dezena</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              Frequência por Dezena
+            </CardTitle>
+          </CardHeader>
           <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={frequenciaData}>
-                <XAxis dataKey="numero" />
-                <YAxis />
-                <Tooltip cursor={{fill: 'transparent'}} />
-                <Bar dataKey="frequencia">
-                  {frequenciaData.map((entry, index) => (
-                    <Cell key={index} fill={entry.isTop ? "hsl(var(--primary))" : "#cbd5e1"} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            {frequenciaData.length > 0 && (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={frequenciaData}>
+                  <XAxis dataKey="numero" />
+                  <YAxis />
+                  <Tooltip
+                    cursor={{ fill: "transparent" }}
+                    contentStyle={{
+                      borderRadius: "8px",
+                      border: "none",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                    }}
+                  />
+                  <Bar dataKey="frequencia">
+                    {frequenciaData.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={
+                          entry.isTop
+                            ? "hsl(var(--primary))"
+                            : "hsl(var(--muted-foreground)/0.3)"
+                        }
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
 
-        {/* BLOCO 4: TABELA */}
+        {/* BLOCO 4 — TABELA */}
         <Card>
-          <CardHeader><CardTitle>Estatísticas Detalhadas</CardTitle></CardHeader>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Dezena</TableHead>
-                <TableHead>Frequência</TableHead>
-                <TableHead>Atraso</TableHead>
-                <TableHead className="text-right">Score</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sortedByScore.map((n) => (
-                <TableRow key={n.numero}>
-                  <TableCell><LotteryBall number={n.numero} size="sm" /></TableCell>
-                  <TableCell>{n.frequencia}x</TableCell>
-                  <TableCell>
-                    <Badge variant={n.atraso > 4 ? "destructive" : "secondary"}>
-                      {n.atraso}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right font-mono font-bold">
-                    {n.score.toFixed(4)}
-                  </TableCell>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5" />
+              Estatísticas Detalhadas
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Dezena</TableHead>
+                  <TableHead>Frequência</TableHead>
+                  <TableHead>Atraso</TableHead>
+                  <TableHead className="text-right">Score</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {sortedByScore.map((n) => (
+                  <TableRow key={n.numero}>
+                    <TableCell>
+                      <LotteryBall number={n.numero} size="sm" />
+                    </TableCell>
+                    <TableCell>{n.frequencia}x</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={n.atraso > 4 ? "destructive" : "secondary"}
+                      >
+                        {n.atraso} concursos
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right font-mono font-semibold text-primary">
+                      {n.score.toFixed(3)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
         </Card>
       </div>
     </Layout>
   );
 }
 
-// Componente auxiliar para os cards pequenos
-function StatMiniCard({ title, value, icon }: { title: string; value: number; icon: React.ReactNode }) {
+/* =====================
+   COMPONENTE AUXILIAR
+===================== */
+function ResumoCard({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+}) {
   return (
     <Card>
       <CardContent className="p-6">
         <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2 uppercase font-semibold">
-          {icon} {title}
+          {icon} {label}
         </div>
         <div className="text-2xl font-bold">{value}</div>
       </CardContent>
