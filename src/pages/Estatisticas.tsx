@@ -47,7 +47,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 /* =====================
-   TIPOS (BACKEND-ALIGNED)
+   TIPOS (BACKEND)
 ===================== */
 type NumeroStat = {
   numero: number;
@@ -81,6 +81,9 @@ type EstatisticasResponse = {
 };
 
 export default function Estatisticas() {
+  /* =====================
+     QUERY (HOOK SEMPRE NO TOPO)
+  ===================== */
   const { data, isLoading, isError } = useQuery<EstatisticasResponse>({
     queryKey: ["estatisticas"],
     queryFn: async () => {
@@ -90,6 +93,27 @@ export default function Estatisticas() {
     staleTime: 1000 * 60 * 10,
     retry: 2,
   });
+
+  /* =====================
+     MEMOS (SEMPRE EXECUTAM)
+  ===================== */
+  const stats = data?.estatisticas ?? [];
+
+  const sortedByScore = useMemo(() => {
+    return [...stats].sort((a, b) => b.score - a.score);
+  }, [stats]);
+
+  const top10 = useMemo(() => sortedByScore.slice(0, 10), [sortedByScore]);
+
+  const frequenciaData = useMemo(() => {
+    return [...stats]
+      .sort((a, b) => a.numero - b.numero)
+      .map((s) => ({
+        numero: String(s.numero).padStart(2, "0"),
+        frequencia: s.frequencia,
+        isTop: top10.some((t) => t.numero === s.numero),
+      }));
+  }, [stats, top10]);
 
   /* =====================
      ESTADOS
@@ -112,38 +136,13 @@ export default function Estatisticas() {
             <AlertCircle className="h-5 w-5" />
             <AlertTitle>Erro ao carregar</AlertTitle>
             <AlertDescription>
-              Não foi possível carregar as estatísticas. Verifique o backend ou
-              a atualização dos dados no Supabase.
+              Não foi possível carregar as estatísticas. Verifique o backend ou o Supabase.
             </AlertDescription>
           </Alert>
         </div>
       </Layout>
     );
   }
-
-  /* =====================
-     DADOS PROCESSADOS
-  ===================== */
-  const stats = data.estatisticas;
-
-  const sortedByScore = useMemo(
-    () => [...stats].sort((a, b) => b.score - a.score),
-    [stats]
-  );
-
-  const top10 = sortedByScore.slice(0, 10);
-
-  const frequenciaData = useMemo(
-    () =>
-      [...stats]
-        .sort((a, b) => a.numero - b.numero)
-        .map((s) => ({
-          numero: String(s.numero).padStart(2, "0"),
-          frequencia: s.frequencia,
-          isTop: top10.some((t) => t.numero === s.numero),
-        })),
-    [stats, top10]
-  );
 
   /* =====================
      RENDER
@@ -164,9 +163,7 @@ export default function Estatisticas() {
 
       <div className="container py-8 md:py-12 space-y-8">
 
-        {/* =====================
-            RESUMO ESTATÍSTICO
-        ===================== */}
+        {/* RESUMO */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -176,40 +173,21 @@ export default function Estatisticas() {
           </CardHeader>
 
           <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="rounded-xl border p-4 text-center">
-              <p className="text-sm text-muted-foreground">Soma média</p>
-              <p className="text-2xl font-bold">
-                {data.analise.soma_media}
-              </p>
-            </div>
-
-            <div className="rounded-xl border p-4 text-center">
-              <p className="text-sm text-muted-foreground">Pares / Ímpares</p>
-              <p className="text-2xl font-bold">
-                {data.analise.pares_media} / {data.analise.impares_media}
-              </p>
-            </div>
-
-            <div className="rounded-xl border p-4 text-center">
-              <p className="text-sm text-muted-foreground">Primos</p>
-              <p className="text-2xl font-bold">
-                {data.analise.primos_media}
-              </p>
-            </div>
-
-            <div className="rounded-xl border p-4 text-center">
-              <p className="text-sm text-muted-foreground">Referência</p>
-              <p className="text-sm font-semibold flex justify-center gap-1 items-center">
-                <Calendar className="h-4 w-4" />
-                {data.analise.data_referencia}
-              </p>
-            </div>
+            <Resumo label="Soma média" value={data.analise.soma_media} />
+            <Resumo
+              label="Pares / Ímpares"
+              value={`${data.analise.pares_media} / ${data.analise.impares_media}`}
+            />
+            <Resumo label="Primos" value={data.analise.primos_media} />
+            <Resumo
+              label="Referência"
+              value={data.analise.data_referencia}
+              icon={<Calendar className="h-4 w-4 inline" />}
+            />
           </CardContent>
         </Card>
 
-        {/* =====================
-            CICLO ATUAL
-        ===================== */}
+        {/* CICLO */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -231,15 +209,12 @@ export default function Estatisticas() {
 
             <p className="text-sm text-muted-foreground flex items-center gap-1">
               <Hash className="h-4 w-4" />
-              Total faltando:{" "}
-              <strong>{data.ciclo.total_faltam}</strong>
+              Total faltando: <strong>{data.ciclo.total_faltam}</strong>
             </p>
           </CardContent>
         </Card>
 
-        {/* =====================
-            GRÁFICO DE FREQUÊNCIA
-        ===================== */}
+        {/* GRÁFICO */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -271,9 +246,7 @@ export default function Estatisticas() {
           </CardContent>
         </Card>
 
-        {/* =====================
-            TABELA DETALHADA
-        ===================== */}
+        {/* TABELA */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -288,35 +261,26 @@ export default function Estatisticas() {
                 <TableRow>
                   <TableHead>#</TableHead>
                   <TableHead>Número</TableHead>
-                  <TableHead>Frequência</TableHead>
+                  <TableHead>Freq.</TableHead>
                   <TableHead>Atraso</TableHead>
                   <TableHead className="text-right">Score</TableHead>
                 </TableRow>
               </TableHeader>
 
               <TableBody>
-                {sortedByScore.map((n, idx) => (
-                  <TableRow
-                    key={n.numero}
-                    className={idx < 10 ? "bg-primary/5" : ""}
-                  >
-                    <TableCell>{idx + 1}</TableCell>
+                {sortedByScore.map((n, i) => (
+                  <TableRow key={n.numero} className={i < 10 ? "bg-primary/5" : ""}>
+                    <TableCell>{i + 1}</TableCell>
                     <TableCell>
-                      <LotteryBall
-                        number={n.numero}
-                        size="sm"
-                        active={idx < 10}
-                      />
+                      <LotteryBall number={n.numero} size="sm" active={i < 10} />
                     </TableCell>
                     <TableCell>{n.frequencia}</TableCell>
                     <TableCell>
-                      <Badge
-                        variant={n.atraso >= 5 ? "destructive" : "secondary"}
-                      >
+                      <Badge variant={n.atraso >= 5 ? "destructive" : "secondary"}>
                         {n.atraso}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right font-mono font-semibold">
+                    <TableCell className="text-right font-mono">
                       {n.score.toFixed(3)}
                     </TableCell>
                   </TableRow>
@@ -327,5 +291,28 @@ export default function Estatisticas() {
         </Card>
       </div>
     </Layout>
+  );
+}
+
+/* =====================
+   COMPONENTE AUXILIAR
+===================== */
+function Resumo({
+  label,
+  value,
+  icon,
+}: {
+  label: string;
+  value: any;
+  icon?: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border p-4 text-center">
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className="text-2xl font-bold flex justify-center gap-1 items-center">
+        {icon}
+        {value}
+      </p>
+    </div>
   );
 }
