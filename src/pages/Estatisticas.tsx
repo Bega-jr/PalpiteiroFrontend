@@ -26,7 +26,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 export default function Estatisticas() {
   const { data: response, isLoading, isError } = useQuery({
     queryKey: ["estatisticas"],
-    queryFn: () => api.getEstatisticasScore(), // Usa o endpoint com score
+    queryFn: () => api.get("/estatisticas"),  // Chama a rota raiz do router
     staleTime: 1000 * 60 * 10,
     retry: 2,
   });
