@@ -12,7 +12,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-// Importação corrigida para usar a função getEstatisticasScore nomeada
 import { getEstatisticasScore } from "@/lib/api"; 
 import {
   BarChart,
@@ -26,7 +25,7 @@ import {
 import { BarChart3, TrendingUp, Clock, Zap, Target, Hash } from "lucide-react";
 
 /* =====================
-   TIPOS CORRETOS (Adicionados aqui para completar o arquivo)
+   TIPOS
 ===================== */
 type AnaliseGeral = {
   soma_media: number;
@@ -59,12 +58,10 @@ type EstatisticasResponse = {
   };
 };
 
-
 export default function Estatisticas() {
-  // Tipagem adicionada ao useQuery para melhor segurança
-  const { data: estatisticas, isLoading } = useQuery<EstatisticasResponse>({
+  const { data: estatisticas, isLoading, isError } = useQuery<EstatisticasResponse>({
     queryKey: ["estatisticasScore"],
-    queryFn: getEstatisticasScore, // Uso direto da função importada
+    queryFn: getEstatisticasScore,
   });
 
   if (isLoading) {
@@ -72,7 +69,7 @@ export default function Estatisticas() {
       <Layout>
         <section className="gradient-hero text-primary-foreground py-12 md:py-16">
           <div className="container">
-            <h1 className="font-display text-3xl md:text-4xl font-bold mb-4 text-white">Estatísticas</h1>
+            <h1 className="font-display text-3xl md:text-4xl font-bold mb-4 text-white">Carregando Estatísticas...</h1>
             <LoadingStats />
           </div>
         </section>
@@ -80,11 +77,21 @@ export default function Estatisticas() {
     );
   }
 
-  const stats = estatisticas?.estatisticas || [];
-  const ciclo = estatisticas?.ciclo;
-  const analise = estatisticas?.analise;
+  if (isError || !estatisticas) {
+    return (
+      <Layout>
+        <div className="container py-20 text-center">
+          <h2 className="text-2xl font-bold text-destructive">Erro ao carregar dados</h2>
+          <p className="text-muted-foreground">O backend não respondeu conforme o esperado.</p>
+        </div>
+      </Layout>
+    );
+  }
 
-  // Ordenações para os gráficos
+  const stats = estatisticas.estatisticas || [];
+  const ciclo = estatisticas.ciclo;
+  const analise = estatisticas.analise;
+
   const sortedByScore = [...stats].sort((a, b) => b.score - a.score);
   const top10 = sortedByScore.slice(0, 10);
 
@@ -98,7 +105,6 @@ export default function Estatisticas() {
 
   return (
     <Layout>
-      {/* Header */}
       <section className="gradient-hero text-primary-foreground py-12 md:py-16">
         <div className="container text-white">
           <div className="max-w-2xl">
@@ -106,7 +112,7 @@ export default function Estatisticas() {
               Análise Estatística
             </h1>
             <p className="text-white/80">
-              Referência: {analise?.data_referencia}
+              Referência: {analise?.data_referencia} | Total: {estatisticas.meta.total_numeros} dezenas
             </p>
           </div>
         </div>
@@ -114,45 +120,15 @@ export default function Estatisticas() {
 
       <div className="container py-8 md:py-12 space-y-8">
         
-        {/* BLOCO 1: CARDS DE RESUMO (Incluindo Primos) */}
-        {analise && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2 uppercase font-semibold">
-                  <TrendingUp className="h-4 w-4" /> Soma Média
-                </div>
-                <div className="text-2xl font-bold">{analise.soma_media}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2 uppercase font-semibold">
-                  <Hash className="h-4 w-4" /> Pares
-                </div>
-                <div className="text-2xl font-bold">{analise.pares_media}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2 uppercase font-semibold">
-                  <Hash className="h-4 w-4" /> Ímpares
-                </div>
-                <div className="text-2xl font-bold">{analise.impares_media}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2 uppercase font-semibold">
-                  <Zap className="h-4 w-4" /> Primos
-                </div>
-                <div className="text-2xl font-bold">{analise.primos_media}</div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+        {/* BLOCO 1: CARDS DE RESUMO */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <StatMiniCard title="Soma Média" value={analise.soma_media} icon={<Target />} />
+          <StatMiniCard title="Pares" value={analise.pares_media} icon={<Hash />} />
+          <StatMiniCard title="Ímpares" value={analise.impares_media} icon={<Hash />} />
+          <StatMiniCard title="Primos" value={analise.primos_media} icon={<Zap />} />
+        </div>
 
-        {/* BLOCO 2: CICLO ATUAL (Visual com Bolinhas) */}
+        {/* BLOCO 2: CICLO ATUAL */}
         <Card className="border-primary/20 bg-primary/5">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -160,46 +136,33 @@ export default function Estatisticas() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
-              Números que ainda não foram sorteados neste ciclo:
-            </p>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-3 mb-4">
               {ciclo?.faltam?.length ? (
                 ciclo.faltam.map((num) => (
                   <LotteryBall key={num} number={num} variant="outline" />
                 ))
               ) : (
-                <Badge variant="secondary" className="text-lg py-1 px-4">🎯 Ciclo Completo!</Badge>
+                <Badge className="bg-green-500">🎯 Ciclo Completo!</Badge>
               )}
             </div>
-            <div className="mt-4 text-xs font-medium text-muted-foreground">
+            <p className="text-xs font-medium text-muted-foreground uppercase">
               TOTAL PENDENTE: {ciclo?.total_faltam}
-            </div>
+            </p>
           </CardContent>
         </Card>
 
-        {/* BLOCO 3: GRÁFICO DE FREQUÊNCIA */}
+        {/* BLOCO 3: GRÁFICO */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" /> Frequência por Dezena
-            </CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle>Frequência por Dezena</CardTitle></CardHeader>
           <CardContent className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={frequenciaData}>
                 <XAxis dataKey="numero" />
                 <YAxis />
-                <Tooltip 
-                  cursor={{fill: 'transparent'}}
-                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                />
+                <Tooltip cursor={{fill: 'transparent'}} />
                 <Bar dataKey="frequencia">
                   {frequenciaData.map((entry, index) => (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={entry.isTop ? "hsl(var(--primary))" : "hsl(var(--muted-foreground)/0.3)"} 
-                    />
+                    <Cell key={index} fill={entry.isTop ? "hsl(var(--primary))" : "#cbd5e1"} />
                   ))}
                 </Bar>
               </BarChart>
@@ -207,45 +170,51 @@ export default function Estatisticas() {
           </CardContent>
         </Card>
 
-        {/* BLOCO 4: TABELA DETALHADA */}
+        {/* BLOCO 4: TABELA */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5" /> Estatísticas Detalhadas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[100px]">Dezena</TableHead>
-                  <TableHead>Frequência</TableHead>
-                  <TableHead>Atraso Atual</TableHead>
-                  <TableHead className="text-right">Score de Força</TableHead>
+          <CardHeader><CardTitle>Estatísticas Detalhadas</CardTitle></CardHeader>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Dezena</TableHead>
+                <TableHead>Frequência</TableHead>
+                <TableHead>Atraso</TableHead>
+                <TableHead className="text-right">Score</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sortedByScore.map((n) => (
+                <TableRow key={n.numero}>
+                  <TableCell><LotteryBall number={n.numero} size="sm" /></TableCell>
+                  <TableCell>{n.frequencia}x</TableCell>
+                  <TableCell>
+                    <Badge variant={n.atraso > 4 ? "destructive" : "secondary"}>
+                      {n.atraso}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right font-mono font-bold">
+                    {n.score.toFixed(4)}
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sortedByScore.map((n) => (
-                  <TableRow key={n.numero}>
-                    <TableCell className="font-bold">
-                      <LotteryBall number={n.numero} size="sm" />
-                    </TableCell>
-                    <TableCell>{n.frequencia}x</TableCell>
-                    <TableCell>
-                      <Badge variant={n.atraso > 4 ? "destructive" : "secondary"}>
-                        {n.atraso} {n.atraso === 1 ? 'concurso' : 'concursos'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-mono font-semibold text-primary">
-                      {n.score.toFixed(3)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
+              ))}
+            </TableBody>
+          </Table>
         </Card>
       </div>
     </Layout>
+  );
+}
+
+// Componente auxiliar para os cards pequenos
+function StatMiniCard({ title, value, icon }: { title: string; value: number; icon: React.ReactNode }) {
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2 uppercase font-semibold">
+          {icon} {title}
+        </div>
+        <div className="text-2xl font-bold">{value}</div>
+      </CardContent>
+    </Card>
   );
 }
