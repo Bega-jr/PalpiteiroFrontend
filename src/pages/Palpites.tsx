@@ -2,97 +2,146 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Layout } from "@/components/Layout";
 import { PalpiteCard } from "@/components/PalpiteCard";
 import { LoadingCard } from "@/components/LoadingStates";
-import { Card, CardContent, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import * as apiFunctions from "@/lib/api";
-import { Clover, RefreshCw, Star, Info, Target, Calculator } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Palpites() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // useQuery agora não espera mais cache no front, espera resposta rápida do back
-  const { data: palpiteFixo, isLoading: loadingFixo, isFetching: fetchingFixo } = useQuery({
-    queryKey: ["palpiteFixo"], 
+  const {
+    data: palpiteFixo,
+    isLoading: loadingFixo,
+    isFetching: fetchingFixo,
+  } = useQuery({
+    queryKey: ["palpiteFixo"],
     queryFn: apiFunctions.getPalpiteFixo,
   });
 
-  const { data: palpitesEstatisticos, isLoading: loadingEstatisticos, isFetching: fetchingEstaticos } = useQuery({
-    queryKey: ["palpitesEstatisticos"], 
+  const {
+    data: palpitesEstatisticos,
+    isLoading: loadingEstatisticos,
+    isFetching: fetchingEstatisticos,
+  } = useQuery({
+    queryKey: ["palpitesEstatisticos"],
     queryFn: apiFunctions.getPalpitesEstatisticos,
   });
 
-  // Apenas invalida o cache do React Query para re-renderizar
+  const isFetchingAny = fetchingFixo || fetchingEstatisticos;
+
   const handleRefresh = async () => {
     await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["palpiteFixo"] }),
-        queryClient.invalidateQueries({ queryKey: ["palpitesEstatisticos"] })
+      queryClient.invalidateQueries({ queryKey: ["palpiteFixo"] }),
+      queryClient.invalidateQueries({ queryKey: ["palpitesEstatisticos"] }),
     ]);
-    toast({ title: "Novas combinações geradas.", });
+
+    toast({ title: "Novos palpites gerados com sucesso!" });
   };
 
-  const handleSave = (numeros: number[]) => { /* ... */ };
-  const isFetchingAny = fetchingFixo || fetchingEstaticos;
+  const handleSave = (numeros: number[]) => {
+    console.log("Salvar palpite:", numeros);
+  };
 
   return (
     <Layout>
+      {/* HERO */}
       <section className="gradient-hero text-primary-foreground py-12 md:py-16">
-        <div className="container">
-          <div className="max-w-2xl space-y-4">
-            <h1 className="font-display text-3xl md:text-5xl font-bold tracking-tight">Gerador de Palpites</h1>
-            <p className="text-white/80 text-lg leading-relaxed">Combinações pré-calculadas e armazenadas no Supabase para acesso instantâneo.</p>
-          </div>
+        <div className="container max-w-3xl space-y-4">
+          <h1 className="font-display text-3xl md:text-5xl font-bold tracking-tight">
+            Gerador de Palpites
+          </h1>
+          <p className="text-white/80 text-lg leading-relaxed">
+            Palpites estatísticos gerados a partir de dados históricos da Lotofácil.
+          </p>
         </div>
       </section>
 
-      <div className="container py-8 md:py-12 space-y-8">
+      <div className="container py-8 md:py-12 space-y-10">
+
+        {/* CONTROLE */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-muted/30 p-4 rounded-2xl border">
-          <p className="text-sm text-muted-foreground">Estatísticas atualizadas para o próximo concurso.</p>
-          <Button onClick={handleRefresh} className="gradient-accent shadow-glow w-full sm:w-auto" disabled={isFetchingAny}>
-            <RefreshCw className={`mr-2 h-4 w-4 ${isFetchingAny ? 'animate-spin' : ''}`} />
-            {isFetchingAny ? 'Gerando...' : 'Atualizar Resultados'}
+          <p className="text-sm text-muted-foreground">
+            Clique para gerar novas combinações.
+          </p>
+          <Button
+            onClick={handleRefresh}
+            disabled={isFetchingAny}
+            className="gradient-accent shadow-glow w-full sm:w-auto"
+          >
+            <RefreshCw
+              className={`mr-2 h-4 w-4 ${isFetchingAny ? "animate-spin" : ""}`}
+            />
+            {isFetchingAny ? "Gerando..." : "Atualizar Palpites"}
           </Button>
         </div>
 
-        {/* Palpite Fixo (Ouro do Dia) */}
+        {/* PALPITE FIXO */}
         <section>
           <div className="flex items-center gap-3 mb-4">
             <h2 className="font-display text-2xl font-bold">Ouro do Dia</h2>
-            <Badge className="bg-lottery-gold text-white border-none">Sugestão VIP</Badge>
-            {palpiteFixo?.target_concurso && (<Badge variant="secondary" className="text-sm">Concurso {palpiteFixo.target_concurso}</Badge>)}
+            <Badge className="bg-lottery-gold text-white border-none">
+              Sugestão Especial
+            </Badge>
           </div>
-          {loadingFixo ? (<LoadingCard />) : palpiteFixo ? (
+
+          {loadingFixo ? (
+            <LoadingCard />
+          ) : palpiteFixo?.numeros ? (
             <PalpiteCard
-              numeros={palpiteFixo.palpite || palpiteFixo.numeros}
-              scoreMedio={palpiteFixo.score_medio} highlight showSaveButton
-              onSave={() => handleSave(palpiteFixo.palpite || palpiteFixo.numeros)}
+              numeros={palpiteFixo.numeros}
+              highlight
+              showSaveButton
+              onSave={() => handleSave(palpiteFixo.numeros)}
             />
-          ) : (<Card className="border-dashed"><CardContent className="p-12 text-center text-muted-foreground">Palpite Ouro indisponível.</CardContent></Card>)}
+          ) : (
+            <Card className="border-dashed">
+              <CardContent className="p-12 text-center text-muted-foreground">
+                Palpite fixo indisponível no momento.
+              </CardContent>
+            </Card>
+          )}
         </section>
 
-        {/* Resumo Técnico dos Filtros (Assumindo que seu Backend Otimizado retorna isso) */}
-        {palpitesEstatisticos?.filtros_aplicados && (<Card className="bg-slate-900 text-white border-none shadow-xl">...</Card>)}
-
-        {/* Grid de Palpites Estatísticos (Agora Instantâneo) */}
+        {/* PALPITES ESTATÍSTICOS */}
         <section>
           <div className="flex items-center gap-2 mb-6">
-            <h2 className="font-display text-2xl font-bold">Palpites do Sistema</h2>
-            <span className="text-xs text-muted-foreground font-medium">{palpitesEstatisticos?.palpites?.length || 0} variações</span>
+            <h2 className="font-display text-2xl font-bold">
+              Palpites do Sistema
+            </h2>
+            <span className="text-xs text-muted-foreground">
+              {palpitesEstatisticos?.palpites?.length || 0} combinações
+            </span>
           </div>
+
           {loadingEstatisticos ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {Array.from({ length: 6 }).map((_, i) => (<LoadingCard key={i} />))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {palpitesEstatisticos?.palpites?.map((p: any, index: number) => (
-                <PalpiteCard key={index} index={index} numeros={p.numeros} scoreMedio={p.score_medio} showSaveButton onSave={() => handleSave(p.numeros)} />
+              {Array.from({ length: 6 }).map((_, i) => (
+                <LoadingCard key={i} />
               ))}
             </div>
+          ) : palpitesEstatisticos?.palpites?.length ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {palpitesEstatisticos.palpites.map((p: any, index: number) => (
+                <PalpiteCard
+                  key={index}
+                  index={index}
+                  numeros={p.numeros}
+                  showSaveButton
+                  onSave={() => handleSave(p.numeros)}
+                />
+              ))}
+            </div>
+          ) : (
+            <Card className="border-dashed">
+              <CardContent className="p-12 text-center text-muted-foreground">
+                Nenhum palpite disponível no momento.
+              </CardContent>
+            </Card>
           )}
-          {!loadingEstatisticos && !palpitesEstatisticos?.palpites?.length && (<Card className="border-dashed"><CardContent className="p-12 text-center text-muted-foreground">Não há palpites disponíveis no momento.</CardContent></Card>)}
         </section>
       </div>
     </Layout>
