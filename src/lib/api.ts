@@ -1,8 +1,7 @@
 import axios from "axios";
 
 /**
- * URL base da API. Prioriza a variável de ambiente do Vite,
- * caso contrário utiliza a URL padrão da Vercel.
+ * URL base da API.
  */
 const API_URL = (
   import.meta.env.VITE_API_URL ||
@@ -10,11 +9,11 @@ const API_URL = (
 ).replace(/\/$/, "");
 
 /**
- * Instância do Axios com configurações globais.
+ * Instância do Axios.
  */
 export const api = axios.create({
   baseURL: API_URL,
-  timeout: 15000,
+  timeout: 25000, // Timeout sincronizado com o backend
   headers: {
     "Content-Type": "application/json",
   },
@@ -23,10 +22,6 @@ export const api = axios.create({
 /* =====================
    ESTATÍSTICAS
 ===================== */
-
-/**
- * Busca as estatísticas base (frequência e atraso)
- */
 export const getEstatisticasScore = async () => {
   const resp = await api.get("/estatisticas/base");
   const data = resp.data?.dados || resp.data;
@@ -42,40 +37,35 @@ export const getPalpitesEstatisticos = async () => {
 };
 
 /* =====================
-   RESULTADOS / CONCURSOS
+   RESULTADOS / CONCURSOS (HOME)
 ===================== */
-
-/**
- * Busca o último concurso consumindo o Backend próprio.
- * O Backend já realiza o mapeamento integral da API da Caixa,
- * evitando erros de CORS e de propriedades 'undefined' (como listaRateioPremio).
- */
 export const getUltimoConcurso = async () => {
   try {
-    // Chamada para o endpoint do seu backend que já mapeia a Caixa
+    // Agora consome o Backend que já faz o mapeamento total
     const resp = await api.get("/concurso/ultimo");
     
-    // Como o Python já entrega o objeto formatado (com dezenas, ganhadores_15, etc),
-    // apenas garantimos que retornamos o objeto diretamente.
-    const data = resp.data;
-    
-    // Se o backend retornar um array por engano, pegamos o primeiro item
-    return Array.isArray(data) ? data[0] : data;
-    
+    // O backend já envia o objeto mapeado (dezenas, ganhadores_15, municipios, etc)
+    return resp.data;
   } catch (error) {
     console.error("Erro ao buscar último concurso via Backend:", error);
     
-    // Fallback: tenta a rota alternativa de últimos
+    // Fallback para a rota de últimos caso a principal falhe (502/Timeout)
     try {
-      const resp = await api.get("/ultimos/1");
-      return Array.isArray(resp.data) ? resp.data[0] : resp.data;
-    } catch (fallbackError) {
-      console.error("Erro no fallback de resultados:", fallbackError);
-      throw fallbackError;
+      const respFallback = await api.get("/ultimos/1");
+      const data = respFallback.data;
+      return Array.isArray(data) ? data[0] : data;
+    } catch (e) {
+      // Retorno vazio seguro para evitar tela branca
+      return {
+        concurso: 0,
+        data: "---",
+        dezenas: [],
+        listaMunicipioUFGanhadores: [],
+        estimativa_proximo: 0
+      };
     }
   }
 };
 
-// Exportação única e padronizada da instância do axios
 export default api;
 
