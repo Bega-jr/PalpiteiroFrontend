@@ -26,17 +26,10 @@ export const api = axios.create({
 
 /**
  * Busca as estatísticas base (frequência e atraso)
- * Garante que a estrutura de dados seja sempre consistente para o frontend.
  */
 export const getEstatisticasScore = async () => {
   const resp = await api.get("/estatisticas/base");
-  
-  // Implementação de segurança:
-  // Se a API retornar um objeto com um campo 'dados', usamos ele.
-  // Senão, usamos o retorno completo, garantindo que nunca seja 'null' ou 'undefined'.
   const data = resp.data?.dados || resp.data;
-
-  // Garantimos que o retorno seja sempre um Array, para que o frontend não use Object.keys() em algo inválido.
   return Array.isArray(data) ? data : [];
 };
 
@@ -53,44 +46,36 @@ export const getPalpitesEstatisticos = async () => {
 ===================== */
 
 /**
- * Busca o último concurso diretamente da API oficial da Caixa
- * e mapeia para o formato esperado pelo componente Home.tsx
+ * Busca o último concurso consumindo o Backend próprio.
+ * O Backend já realiza o mapeamento integral da API da Caixa,
+ * evitando erros de CORS e de propriedades 'undefined' (como listaRateioPremio).
  */
 export const getUltimoConcurso = async () => {
-  // CORREÇÃO: Adicionado o protocolo HTTPS que faltava
-  const CAIXA_URL = "servicebus2.caixa.gov.br";
-
   try {
-    const response = await axios.get(CAIXA_URL);
-    const data = response.data;
+    // Chamada para o endpoint do seu backend que já mapeia a Caixa
+    const resp = await api.get("/concurso/ultimo");
     
-    // Mapeia o rateio por faixa
-    const rateioMap: { [key: number]: any } = {};
-    data.listaRateioPremio.forEach((item: any) => {
-      rateioMap[item.faixa] = { ganhadores: item.numeroDeGanhadores, valor: item.valorPremio };
-    });
-
-    return {
-      concurso: data.numero,
-      data: data.dataApuracao,
-      dezenas: data.listaDezenas.map(Number).sort((a: number, b: number) => a - b),
-      acumulado: data.acumulado,
-      estimativa_proximo: data.valorEstimadoProximoConcurso,
-      // CORREÇÃO: Uso correto do rateioMap indexado por [1]
-      ganhadores_15: rateioMap[1]?.ganhadores || 0,
-      valor_15: rateioMap[1]?.valor || 0,
-      ganhadores_14: rateioMap[2]?.ganhadores || 0,
-      valor_14: rateioMap[2]?.valor || 0,
-      // ... (demais faixas se necessário)
-    };
+    // Como o Python já entrega o objeto formatado (com dezenas, ganhadores_15, etc),
+    // apenas garantimos que retornamos o objeto diretamente.
+    const data = resp.data;
+    
+    // Se o backend retornar um array por engano, pegamos o primeiro item
+    return Array.isArray(data) ? data[0] : data;
+    
   } catch (error) {
-    console.error("Erro ao buscar último concurso da Caixa:", error);
-    // Fallback para o backend próprio
-    const resp = await api.get("/ultimos/1");
-    // Garantimos que o fallback retorne um objeto, não um array puro
-    return Array.isArray(resp.data) ? resp.data[0] : resp.data;
+    console.error("Erro ao buscar último concurso via Backend:", error);
+    
+    // Fallback: tenta a rota alternativa de últimos
+    try {
+      const resp = await api.get("/ultimos/1");
+      return Array.isArray(resp.data) ? resp.data[0] : resp.data;
+    } catch (fallbackError) {
+      console.error("Erro no fallback de resultados:", fallbackError);
+      throw fallbackError;
+    }
   }
 };
 
 // Exportação única e padronizada da instância do axios
 export default api;
+
