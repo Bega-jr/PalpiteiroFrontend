@@ -6,7 +6,13 @@ import { LoadingList } from "@/components/LoadingStates";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Trophy, Search, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
+import {
+  Trophy,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  AlertCircle,
+} from "lucide-react";
 
 const BASE_URL = "https://palpiteiro-backend.vercel.app";
 
@@ -14,56 +20,80 @@ interface Concurso {
   concurso: number;
   data: string;
   dezenas: number[];
+  acumulado?: boolean;
 }
 
 export default function Resultados() {
   const [searchConcurso, setSearchConcurso] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
-  const quantidade = 50;
+  const limit = 10;
 
-  // Últimos concursos
-  const {
-    data: ultimosConcursos = [],
-    isLoading: loadingLista,
-    isError: errorLista,
-  } = useQuery<Concurso[]>({
-    queryKey: ["ultimosConcursos", quantidade],
+  // ===============================
+  // 🔹 TOTAL DE CONCURSOS
+  // ===============================
+  const { data: totalData } = useQuery({
+    queryKey: ["total-concursos"],
     queryFn: async () => {
-      const res = await fetch(`${BASE_URL}/ultimos/${quantidade}`);
-      if (!res.ok) throw new Error("Erro ao carregar últimos concursos");
+      const res = await fetch(`${BASE_URL}/resultados/total`);
+      if (!res.ok) throw new Error("Erro ao buscar total");
       return res.json();
     },
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const total = totalData?.total ?? 0;
+  const totalPages = Math.ceil(total / limit);
+
+  // ===============================
+  // 🔹 LISTA PAGINADA
+  // ===============================
+  const {
+    data: listaData,
+    isLoading: loadingLista,
+    isError: errorLista,
+  } = useQuery({
+    queryKey: ["resultados", currentPage],
+    queryFn: async () => {
+      const res = await fetch(
+        `${BASE_URL}/resultados?page=${currentPage}&limit=${limit}`
+      );
+      if (!res.ok) throw new Error("Erro ao carregar resultados");
+      return res.json();
+    },
+    keepPreviousData: true,
     staleTime: 5 * 60 * 1000,
   });
 
-  // Busca por concurso específico
+  const concursos: Concurso[] = listaData?.resultados ?? [];
+
+  // ===============================
+  // 🔹 BUSCA POR CONCURSO
+  // ===============================
   const {
     data: concursoBuscado,
     isLoading: loadingBusca,
     isError: errorBusca,
-  } = useQuery<Concurso | null>({
+  } = useQuery({
     queryKey: ["concurso", searchConcurso],
     queryFn: async () => {
-      const num = parseInt(searchConcurso);
-      if (isNaN(num)) return null;
-      const res = await fetch(`${BASE_URL}/concurso/${num}`);
+      const num = Number(searchConcurso);
+      if (!num) return null;
+
+      const res = await fetch(
+        `${BASE_URL}/resultados/concurso/${num}`
+      );
+
       if (!res.ok) {
         if (res.status === 404) return null;
         throw new Error("Erro ao buscar concurso");
       }
-      return res.json();
+
+      const json = await res.json();
+      return json.concurso;
     },
-    enabled: searchConcurso.length > 0 && !isNaN(parseInt(searchConcurso)),
+    enabled: !!searchConcurso,
     retry: false,
   });
-
-  const concursos = ultimosConcursos;
-  const totalPages = Math.ceil(concursos.length / itemsPerPage);
-  const paginatedConcursos = concursos.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,27 +109,23 @@ export default function Resultados() {
               Resultados Oficiais
             </h1>
             <p className="text-white/80">
-              Confira os últimos resultados da Lotofácil. Dados atualizados
-              diretamente da Caixa Econômica Federal.
+              Resultados da Lotofácil atualizados automaticamente.
             </p>
           </div>
         </div>
       </section>
 
       <div className="container py-8 md:py-12 space-y-8">
-        {/* Busca por Concurso */}
+        {/* Busca */}
         <Card>
           <CardContent className="p-6">
             <form onSubmit={handleSearch} className="flex gap-4">
-              <div className="flex-1">
-                <Input
-                  type="number"
-                  placeholder="Buscar por número do concurso..."
-                  value={searchConcurso}
-                  onChange={(e) => setSearchConcurso(e.target.value)}
-                  className="w-full"
-                />
-              </div>
+              <Input
+                type="number"
+                placeholder="Buscar por número do concurso..."
+                value={searchConcurso}
+                onChange={(e) => setSearchConcurso(e.target.value)}
+              />
               <Button type="submit" disabled={!searchConcurso || loadingBusca}>
                 <Search className="mr-2 h-4 w-4" />
                 Buscar
@@ -113,19 +139,15 @@ export default function Resultados() {
           <section>
             <h2 className="font-display text-xl font-bold mb-4 flex items-center gap-2">
               <Trophy className="h-5 w-5 text-lottery-gold" />
-              Resultado do Concurso {searchConcurso}
+              Concurso {searchConcurso}
             </h2>
+
             {loadingBusca ? (
-              <Card>
-                <CardContent className="p-6 text-center text-muted-foreground">
-                  Buscando...
-                </CardContent>
-              </Card>
+              <LoadingList />
             ) : errorBusca ? (
               <Card>
-                <CardContent className="p-6 text-center text-destructive flex items-center justify-center gap-2">
-                  <AlertCircle className="h-4 w-4" />
-                  Erro ao buscar o concurso.
+                <CardContent className="p-6 text-destructive text-center">
+                  Erro ao buscar concurso
                 </CardContent>
               </Card>
             ) : concursoBuscado ? (
@@ -136,69 +158,69 @@ export default function Resultados() {
               />
             ) : (
               <Card>
-                <CardContent className="p-6 text-center text-destructive flex items-center justify-center gap-2">
-                  <AlertCircle className="h-4 w-4" />
-                  Concurso não encontrado.
+                <CardContent className="p-6 text-destructive text-center">
+                  Concurso não encontrado
                 </CardContent>
               </Card>
             )}
           </section>
         )}
 
-        {/* Lista de Concursos */}
+        {/* Lista */}
         <section>
           <h2 className="font-display text-xl font-bold mb-4 flex items-center gap-2">
             <Trophy className="h-5 w-5 text-primary" />
             Últimos Resultados
           </h2>
+
           {loadingLista ? (
             <LoadingList />
           ) : errorLista ? (
             <Card>
-              <CardContent className="p-6 text-center text-destructive flex items-center justify-center gap-2">
-                <AlertCircle className="h-4 w-4" />
-                Erro ao carregar a lista de concursos.
+              <CardContent className="p-6 text-destructive text-center">
+                Erro ao carregar resultados
               </CardContent>
             </Card>
           ) : (
             <>
               <div className="space-y-3">
-                {paginatedConcursos.map((concurso) => (
+                {concursos.map((c) => (
                   <ConcursoCard
-                    key={concurso.concurso}
-                    concurso={concurso.concurso}
-                    data={concurso.data}
-                    dezenas={concurso.dezenas}
+                    key={c.concurso}
+                    concurso={c.concurso}
+                    data={c.data}
+                    dezenas={c.dezenas}
                     compact
                   />
                 ))}
               </div>
+
               {/* Paginação */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-4 mt-8">
-                  <Button
-                    variant="outline"
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                    Anterior
-                  </Button>
-                  <span className="text-sm text-muted-foreground">
-                    Página {currentPage} de {totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    onClick={() =>
-                      setCurrentPage((p) => Math.min(totalPages, p + 1))
-                    }
-                    disabled={currentPage === totalPages}
-                  >
-                    Próxima
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
+              <div className="flex justify-center items-center gap-4 mt-8">
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Anterior
+                </Button>
+
+                <span className="text-sm text-muted-foreground">
+                  Página {currentPage} de {totalPages}
+                </span>
+
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(totalPages, p + 1))
+                  }
+                  disabled={currentPage >= totalPages}
+                >
+                  Próxima
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
             </>
           )}
         </section>
