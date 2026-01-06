@@ -80,7 +80,7 @@ export default function Resultados() {
       if (!num) return null;
 
       const res = await fetch(
-        `${BASE_URL}/resultados/concurso/${num}`
+        `${BASE_URL}/resultados/${num}`
       );
 
       if (!res.ok) {
