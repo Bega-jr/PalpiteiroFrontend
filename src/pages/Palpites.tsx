@@ -34,8 +34,6 @@ export default function Palpites() {
   });
 
   const isFetchingAny = fetchingFixo || fetchingEstatisticos;
-
-  // Data de referência vinda do backend (pega do primeiro registro disponível)
   const dataReferencia = palpiteFixo?.data_referencia || palpitesEstatisticos?.data_referencia;
 
   const handleRefresh = async () => {
@@ -43,7 +41,7 @@ export default function Palpites() {
       queryClient.invalidateQueries({ queryKey: ["palpiteFixo"] }),
       queryClient.invalidateQueries({ queryKey: ["palpitesEstatisticos"] }),
     ]);
-    toast({ title: "Dados sincronizados com o servidor!" });
+    toast({ title: "Dados sincronizados!" });
   };
 
   return (
@@ -63,7 +61,7 @@ export default function Palpites() {
             Gerador de Palpites
           </h1>
           <p className="text-white/80 text-lg leading-relaxed">
-            Palpites inteligentes validados por algoritmos de tendência e scores de frequência.
+            Palpites inteligentes validados por algoritmos de tendência para 2026.
           </p>
         </div>
       </section>
@@ -74,7 +72,7 @@ export default function Palpites() {
           <div className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4 text-primary" />
             <p className="text-sm text-muted-foreground">
-              Algoritmo atualizado com o último concurso.
+              Algoritmo sincronizado com o banco de dados.
             </p>
           </div>
           <Button
@@ -139,7 +137,9 @@ export default function Palpites() {
 
           {loadingEstatisticos ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[1, 2, 3].map((i) => <LoadingCard key={i} />)}
+              {Array.from({ length: 6 }).map((_, i) => (
+                <LoadingCard key={i} />
+              ))}
             </div>
           ) : palpitesEstatisticos?.palpites?.length ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -165,7 +165,7 @@ export default function Palpites() {
           ) : (
             <Card className="border-dashed">
               <CardContent className="p-12 text-center text-muted-foreground">
-                Nenhum palpite estatístico gerado para esta data.
+                Nenhum palpite estatístico disponível para hoje.
               </CardContent>
             </Card>
           )}
@@ -173,7 +173,5 @@ export default function Palpites() {
       </div>
     </Layout>
   );
-}
-
 }
 
