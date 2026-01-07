@@ -34,7 +34,7 @@ export default function Palpites() {
   });
 
   const isFetchingAny = fetchingFixo || fetchingEstatisticos;
-  
+
   // Data de referência vinda de qualquer um dos endpoints
   const dataReferencia = palpiteFixo?.data_referencia || palpitesEstatisticos?.data_referencia;
 
@@ -64,7 +64,7 @@ export default function Palpites() {
           <div className="flex items-center gap-2 text-white/60 text-sm mb-2">
             <Calendar className="h-4 w-4" />
             <span>
-              {dataReferencia 
+              {dataReferencia
                 ? `Análise de hoje: ${format(new Date(dataReferencia + 'T00:00:00'), "dd 'de' MMMM", { locale: ptBR })}`
                 : "Aguardando dados de hoje..."}
             </span>
@@ -77,7 +77,6 @@ export default function Palpites() {
           </p>
         </div>
       </section>
-
       <div className="container py-8 md:py-12 space-y-10">
         {/* CONTROLE */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-muted/30 p-4 rounded-2xl border">
@@ -97,7 +96,6 @@ export default function Palpites() {
             Sincronizar Dados
           </Button>
         </div>
-
         {/* PALPITE FIXO */}
         <section>
           <div className="flex items-center justify-between mb-4">
@@ -113,7 +111,6 @@ export default function Palpites() {
               </span>
             )}
           </div>
-
           {loadingFixo ? (
             <LoadingCard />
           ) : palpiteFixo?.numeros ? (
@@ -125,7 +122,7 @@ export default function Palpites() {
               />
               <div className="flex gap-4 px-2 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
                 <span className="flex items-center gap-1">
-                  <Calculator className="h-3 w-3"/> Soma: {palpiteFixo.soma || '--'}
+                  <Calculator className="h-3 w-3"/> Soma: {palpiteFixo.soma || palpiteFixo.soma_total || '--'}
                 </span>
                 <span>Pares: {palpiteFixo.pares || '--'}</span>
                 <span>Ímpares: {palpiteFixo.impares || '--'}</span>
@@ -139,35 +136,33 @@ export default function Palpites() {
             </Card>
           )}
         </section>
-
         {/* PALPITES ESTATÍSTICOS */}
         <section>
           <div className="flex items-center gap-2 mb-6">
             <h2 className="font-display text-2xl font-bold">Sugestões do Sistema</h2>
             <Badge variant="secondary" className="font-mono">
-              {palpitesEstatisticos?.palpites?.length || 0}
+              {palpitesEstatisticos?.total || 0}
             </Badge>
           </div>
-
           {loadingEstatisticos ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {Array.from({ length: 6 }).map((_, i) => (
                 <LoadingCard key={i} />
               ))}
             </div>
-          ) : palpitesEstatisticos?.palpites?.length ? (
+          ) : palpitesEstatisticos?.palpites?.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {palpitesEstatisticos.palpites.map((p: any) => (
-                <div key={p.indice} className="space-y-2">
+              {palpitesEstatisticos.palpites.map((p: any, index: number) => (
+                <div key={p.indice_palpite} className="space-y-2">
                   <PalpiteCard
-                    index={p.indice}
+                    index={p.indice_palpite}
                     numeros={parseNumbers(p.numeros)}
                     showSaveButton
                   />
                   <div className="flex justify-between items-center px-1">
                     <div className="flex gap-2 text-[9px] text-muted-foreground font-bold uppercase">
-                      <span>Soma: {p.soma}</span>
-                      <span>P: {p.pares} / I: {15 - p.pares}</span>
+                      <span>Soma: {p.soma || p.soma_total || '--'}</span>
+                      <span>P: {p.pares || '--'} / I: {15 - (p.pares || 0)}</span>
                     </div>
                     <Badge variant="outline" className="text-[9px] h-4 py-0 leading-none border-primary/20 text-primary">
                       Score: {(p.score * 100).toFixed(0)}%
