@@ -34,6 +34,8 @@ export default function Palpites() {
   });
 
   const isFetchingAny = fetchingFixo || fetchingEstatisticos;
+  
+  // Data de referência vinda de qualquer um dos endpoints
   const dataReferencia = palpiteFixo?.data_referencia || palpitesEstatisticos?.data_referencia;
 
   const handleRefresh = async () => {
@@ -41,7 +43,17 @@ export default function Palpites() {
       queryClient.invalidateQueries({ queryKey: ["palpiteFixo"] }),
       queryClient.invalidateQueries({ queryKey: ["palpitesEstatisticos"] }),
     ]);
-    toast({ title: "Dados sincronizados!" });
+    toast({ title: "Dados sincronizados com sucesso!" });
+  };
+
+  // Função para garantir que os números sejam um array (trata JSONB do Supabase)
+  const parseNumbers = (val: any): number[] => {
+    if (Array.isArray(val)) return val;
+    try {
+      return typeof val === "string" ? JSON.parse(val) : [];
+    } catch {
+      return [];
+    }
   };
 
   return (
@@ -53,8 +65,8 @@ export default function Palpites() {
             <Calendar className="h-4 w-4" />
             <span>
               {dataReferencia 
-                ? `Análise de hoje: ${format(new Date(dataReferencia), "dd 'de' MMMM", { locale: ptBR })}`
-                : "Processando estatísticas..."}
+                ? `Análise de hoje: ${format(new Date(dataReferencia + 'T00:00:00'), "dd 'de' MMMM", { locale: ptBR })}`
+                : "Aguardando dados de hoje..."}
             </span>
           </div>
           <h1 className="font-display text-3xl md:text-5xl font-bold tracking-tight">
@@ -97,7 +109,7 @@ export default function Palpites() {
             </div>
             {palpiteFixo?.metricas?.score && (
               <span className="text-xs font-medium text-muted-foreground">
-                Score: {(palpiteFixo.metricas.score * 100).toFixed(0)}%
+                Confiança: {(palpiteFixo.metricas.score * 100).toFixed(0)}%
               </span>
             )}
           </div>
@@ -107,20 +119,22 @@ export default function Palpites() {
           ) : palpiteFixo?.numeros ? (
             <div className="space-y-3">
               <PalpiteCard
-                numeros={palpiteFixo.numeros}
+                numeros={parseNumbers(palpiteFixo.numeros)}
                 highlight
                 showSaveButton
               />
               <div className="flex gap-4 px-2 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                <span className="flex items-center gap-1"><Calculator className="h-3 w-3"/> Soma: {palpiteFixo.metricas?.soma || '--'}</span>
-                <span>Pares: {palpiteFixo.metricas?.pares || '--'}</span>
-                <span>Ímpares: {palpiteFixo.metricas?.impares || '--'}</span>
+                <span className="flex items-center gap-1">
+                  <Calculator className="h-3 w-3"/> Soma: {palpiteFixo.soma || '--'}
+                </span>
+                <span>Pares: {palpiteFixo.pares || '--'}</span>
+                <span>Ímpares: {palpiteFixo.impares || '--'}</span>
               </div>
             </div>
           ) : (
             <Card className="border-dashed bg-muted/10">
               <CardContent className="p-12 text-center text-muted-foreground">
-                Aguardando processamento do palpite mestre...
+                Nenhum palpite mestre encontrado para hoje.
               </CardContent>
             </Card>
           )}
@@ -147,7 +161,7 @@ export default function Palpites() {
                 <div key={p.indice} className="space-y-2">
                   <PalpiteCard
                     index={p.indice}
-                    numeros={p.numeros}
+                    numeros={parseNumbers(p.numeros)}
                     showSaveButton
                   />
                   <div className="flex justify-between items-center px-1">
@@ -165,7 +179,7 @@ export default function Palpites() {
           ) : (
             <Card className="border-dashed">
               <CardContent className="p-12 text-center text-muted-foreground">
-                Nenhum palpite estatístico disponível para hoje.
+                Aguardando a geração dos palpites diários.
               </CardContent>
             </Card>
           )}
@@ -174,4 +188,3 @@ export default function Palpites() {
     </Layout>
   );
 }
-
