@@ -31,9 +31,14 @@ export const getEstatisticasScore = async () => {
 /* =====================
    PALPITES
 ===================== */
-export const getPalpitesEstatisticos = async () => {
-  const resp = await api.get("/palpites/estatisticos");
-  return resp.data;
+export async function getPalpiteFixo() {
+  const res = await api.get("/palpites/fixo");
+  return res.data;
+}
+
+export async function getPalpitesEstatisticos() {
+  const res = await api.get("/palpites/estatisticos");
+  return res.data;
 };
 
 /* =====================
