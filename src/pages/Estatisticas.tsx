@@ -35,19 +35,21 @@ import {
 
 import {
   TrendingUp,
-  Clock,
   Zap,
   Sigma,
   Calendar,
   Repeat,
   Hash,
   AlertCircle,
+  Flame,
+  Snowflake,
+  Clock,
 } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 /* =====================
-   TIPOS (BACKEND)
+   TIPOS (BACKEND REAL)
 ===================== */
 type NumeroStat = {
   numero: number;
@@ -69,20 +71,26 @@ type Ciclo = {
   total_faltam: number;
 };
 
+type Listas = {
+  numeros_quentes: number[];
+  numeros_frios: number[];
+  atrasados_ranking: number[];
+};
+
 type EstatisticasResponse = {
   estatisticas: NumeroStat[];
   analise: Analise;
   ciclo: Ciclo;
+  listas: Listas;
   meta: {
-    data_referencia: string;
-    total_numeros: number;
     fonte: string;
+    total_numeros: number;
   };
 };
 
 export default function Estatisticas() {
   /* =====================
-     QUERY (HOOK SEMPRE NO TOPO)
+     QUERY
   ===================== */
   const { data, isLoading, isError } = useQuery<EstatisticasResponse>({
     queryKey: ["estatisticas"],
@@ -95,13 +103,14 @@ export default function Estatisticas() {
   });
 
   /* =====================
-     MEMOS (SEMPRE EXECUTAM)
+     MEMOS
   ===================== */
   const stats = data?.estatisticas ?? [];
 
-  const sortedByScore = useMemo(() => {
-    return [...stats].sort((a, b) => b.score - a.score);
-  }, [stats]);
+  const sortedByScore = useMemo(
+    () => [...stats].sort((a, b) => b.score - a.score),
+    [stats]
+  );
 
   const top10 = useMemo(() => sortedByScore.slice(0, 10), [sortedByScore]);
 
@@ -136,7 +145,7 @@ export default function Estatisticas() {
             <AlertCircle className="h-5 w-5" />
             <AlertTitle>Erro ao carregar</AlertTitle>
             <AlertDescription>
-              Não foi possível carregar as estatísticas. Verifique o backend ou o Supabase.
+              Não foi possível carregar as estatísticas.
             </AlertDescription>
           </Alert>
         </div>
@@ -150,9 +159,9 @@ export default function Estatisticas() {
   return (
     <Layout>
       {/* HEADER */}
-      <section className="gradient-hero text-primary-foreground py-12 md:py-16">
+      <section className="gradient-hero text-primary-foreground py-12">
         <div className="container text-white">
-          <h1 className="font-display text-3xl md:text-4xl font-bold mb-2">
+          <h1 className="text-3xl md:text-4xl font-bold mb-2">
             Estatísticas da Lotofácil
           </h1>
           <p className="text-white/80">
@@ -161,7 +170,7 @@ export default function Estatisticas() {
         </div>
       </section>
 
-      <div className="container py-8 md:py-12 space-y-8">
+      <div className="container py-10 space-y-8">
 
         {/* RESUMO */}
         <Card>
@@ -180,9 +189,34 @@ export default function Estatisticas() {
             />
             <Resumo label="Primos" value={data.analise.primos_media} />
             <Resumo
-              label="Referência"
-              value={data.analise.data_referencia}
-              icon={<Calendar className="h-4 w-4 inline" />}
+              label="Fonte"
+              value={data.meta.fonte}
+              icon={<Calendar className="h-4 w-4" />}
+            />
+          </CardContent>
+        </Card>
+
+        {/* LISTAS */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Destaques Estatísticos</CardTitle>
+          </CardHeader>
+
+          <CardContent className="grid md:grid-cols-3 gap-6">
+            <Lista
+              titulo="Quentes"
+              icon={<Flame className="h-4 w-4" />}
+              numeros={data.listas.numeros_quentes}
+            />
+            <Lista
+              titulo="Frios"
+              icon={<Snowflake className="h-4 w-4" />}
+              numeros={data.listas.numeros_frios}
+            />
+            <Lista
+              titulo="Mais Atrasados"
+              icon={<Clock className="h-4 w-4" />}
+              numeros={data.listas.atrasados_ranking}
             />
           </CardContent>
         </Card>
@@ -261,7 +295,7 @@ export default function Estatisticas() {
                 <TableRow>
                   <TableHead>#</TableHead>
                   <TableHead>Número</TableHead>
-                  <TableHead>Freq.</TableHead>
+                  <TableHead>Frequência</TableHead>
                   <TableHead>Atraso</TableHead>
                   <TableHead className="text-right">Score</TableHead>
                 </TableRow>
@@ -289,13 +323,14 @@ export default function Estatisticas() {
             </Table>
           </CardContent>
         </Card>
+
       </div>
     </Layout>
   );
 }
 
 /* =====================
-   COMPONENTE AUXILIAR
+   COMPONENTES AUX
 ===================== */
 function Resumo({
   label,
@@ -313,6 +348,30 @@ function Resumo({
         {icon}
         {value}
       </p>
+    </div>
+  );
+}
+
+function Lista({
+  titulo,
+  numeros,
+  icon,
+}: {
+  titulo: string;
+  numeros: number[];
+  icon?: React.ReactNode;
+}) {
+  return (
+    <div>
+      <h3 className="font-semibold mb-2 flex items-center gap-1">
+        {icon}
+        {titulo}
+      </h3>
+      <div className="flex flex-wrap gap-2">
+        {numeros.map((n) => (
+          <LotteryBall key={n} number={n} />
+        ))}
+      </div>
     </div>
   );
 }
