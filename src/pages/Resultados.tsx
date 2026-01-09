@@ -20,9 +20,8 @@ const BASE_URL = "https://palpiteiro-backend.vercel.app";
 
 interface Concurso {
   concurso: number;
-  data: string;
+  data: string; // Agora recebemos "DD/MM/YYYY" direto do backend
   dezenas: number[];
-  acumulado?: boolean;
 }
 
 export default function Resultados() {
@@ -31,124 +30,58 @@ export default function Resultados() {
   const [currentPage, setCurrentPage] = useState(1);
   const limit = 10;
 
-  /**
-   * FORMATAÇÃO DE DATA À PROVA DE ERROS
-   */
-  const formatarDataFinal = (dataRaw: any) => {
-    if (!dataRaw || typeof dataRaw !== 'string') return "Data não disponível";
-
-    try {
-      // 1. Se a data já estiver no formato brasileiro (DD/MM/YYYY), retorna direto
-      if (dataRaw.includes('/') && dataRaw.split('/').length === 3) {
-        return dataRaw;
-      }
-
-      // 2. Limpa a string de possíveis timestamps (T00:00:00 ou espaço)
-      const dataApenas = dataRaw.split('T')[0].split(' ')[0];
-      
-      // 3. Verifica se é o formato ISO (YYYY-MM-DD)
-      const partes = dataApenas.split('-');
-      if (partes.length === 3) {
-        const [ano, mes, dia] = partes;
-        // Garante que o ano tenha 4 dígitos para ser válido
-        if (ano.length === 4) {
-          return `${dia}/${mes}/${ano}`;
-        }
-      }
-
-      // 4. Se nada funcionar, tenta o Date padrão como último recurso
-      const d = new Date(dataRaw);
-      if (!isNaN(d.getTime())) {
-        return d.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
-      }
-
-      return dataRaw; // Retorna o que veio se não conseguir formatar
-    } catch (e) {
-      return "Data inválida";
-    }
-  };
-
   const forceRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ["resultados"] });
     queryClient.invalidateQueries({ queryKey: ["total-concursos"] });
   };
 
-  const { data: totalData, isFetching: fetchingTotal } = useQuery({
+  const { data: totalData } = useQuery({
     queryKey: ["total-concursos"],
     queryFn: async () => {
       const res = await fetch(`${BASE_URL}/resultados/total`);
-      if (!res.ok) throw new Error("Erro ao buscar total");
       return res.json();
     },
-    staleTime: 10 * 60 * 1000,
   });
 
   const total = totalData?.total ?? 0;
   const totalPages = Math.ceil(total / limit);
 
-  const {
-    data: listaData,
-    isLoading: loadingLista,
-    isError: errorLista,
-    isFetching: fetchingLista,
-  } = useQuery({
+  const { data: listaData, isLoading: loadingLista, isFetching: fetchingLista } = useQuery({
     queryKey: ["resultados", currentPage],
     queryFn: async () => {
-      const cacheBuster = Date.now();
-      const url = `${BASE_URL}/resultados?page=${currentPage}&limit=${limit}&_cb=${cacheBuster}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error("Erro ao carregar resultados");
+      const res = await fetch(`${BASE_URL}/resultados?page=${currentPage}&limit=${limit}`);
       return res.json();
     },
-    placeholderData: (previousData) => previousData,
   });
 
   const concursos: Concurso[] = listaData?.resultados ?? [];
 
-  const {
-    data: concursoBuscado,
-    isLoading: loadingBusca,
-    isError: errorBusca,
-  } = useQuery({
+  const { data: concursoBuscado, isLoading: loadingBusca } = useQuery({
     queryKey: ["concurso", searchConcurso],
     queryFn: async () => {
-      const num = Number(searchConcurso);
-      if (!num) return null;
-      const res = await fetch(`${BASE_URL}/resultados/${num}`);
-      if (!res.ok) return null;
+      const res = await fetch(`${BASE_URL}/resultados/${searchConcurso}`);
       const json = await res.json();
       return json.concurso;
     },
     enabled: !!searchConcurso,
-    retry: false,
   });
 
   return (
     <Layout>
-      <section className="gradient-hero text-primary-foreground py-12 md:py-16">
+      <section className="gradient-hero text-primary-foreground py-12">
         <div className="container flex justify-between items-center">
-          <div className="max-w-2xl">
-            <h1 className="font-display text-3xl md:text-4xl font-bold mb-4">
-              Resultados Oficiais
-            </h1>
-            <p className="text-white/80">
-              Resultados da Lotofácil (Base 2026).
-            </p>
+          <div>
+            <h1 className="text-3xl font-bold">Resultados Oficiais</h1>
+            <p className="text-white/80">Datas processadas via Backend (Brasília).</p>
           </div>
-          <Button
-            onClick={forceRefresh}
-            variant="outline"
-            size="sm"
-            disabled={fetchingTotal || fetchingLista}
-            className="gap-2 bg-white text-primary hover:bg-slate-100"
-          >
-            <RefreshCw className={`h-4 w-4 ${fetchingTotal || fetchingLista ? "animate-spin" : ""}`} />
+          <Button onClick={forceRefresh} variant="outline" className="bg-white text-primary">
+            <RefreshCw className={`h-4 w-4 mr-2 ${fetchingLista ? "animate-spin" : ""}`} />
             Sincronizar
           </Button>
         </div>
       </section>
 
-      <div className="container py-8 md:py-12 space-y-8">
+      <div className="container py-8 space-y-8">
         <Card>
           <CardContent className="p-6">
             <form onSubmit={(e) => e.preventDefault()} className="flex gap-4">
@@ -158,80 +91,35 @@ export default function Resultados() {
                 value={searchConcurso}
                 onChange={(e) => setSearchConcurso(e.target.value)}
               />
-              <Button type="submit" disabled={!searchConcurso || loadingBusca}>
-                <Search className="mr-2 h-4 w-4" /> Buscar
-              </Button>
+              <Button type="submit"><Search className="h-4 w-4 mr-2" /> Buscar</Button>
             </form>
           </CardContent>
         </Card>
 
         {searchConcurso && (
           <section>
-            <h2 className="font-display text-xl font-bold mb-4 flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-lottery-gold" />
-              Concurso {searchConcurso}
-            </h2>
-            {loadingBusca ? (
-              <LoadingList />
-            ) : concursoBuscado ? (
-              <ConcursoCard
-                concurso={concursoBuscado.concurso}
-                data={formatarDataFinal(concursoBuscado.data)}
-                dezenas={concursoBuscado.dezenas}
-              />
-            ) : (
-              <Card><CardContent className="p-6 text-center">Concurso não encontrado</CardContent></Card>
-            )}
+            <h2 className="text-xl font-bold mb-4">Busca: Concurso {searchConcurso}</h2>
+            {loadingBusca ? <LoadingList /> : concursoBuscado ? (
+              <ConcursoCard concurso={concursoBuscado.concurso} data={concursoBuscado.data} dezenas={concursoBuscado.dezenas} />
+            ) : <p className="text-center">Não encontrado.</p>}
           </section>
         )}
 
         <section>
-          <h2 className="font-display text-xl font-bold mb-4 flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-primary" />
-            Últimos Resultados
-          </h2>
-
-          {loadingLista ? (
-            <LoadingList />
-          ) : (
+          <h2 className="text-xl font-bold mb-4">Últimos Resultados</h2>
+          {loadingLista ? <LoadingList /> : (
             <>
-              <div className="relative">
-                {fetchingLista && !loadingLista && (
-                  <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-10">
-                    <Loader2 className="h-8 w-8 text-primary animate-spin" />
-                  </div>
-                )}
-                <div className="space-y-3">
-                  {concursos.map((c) => (
-                    <ConcursoCard
-                      key={c.concurso}
-                      concurso={c.concurso}
-                      data={formatarDataFinal(c.data)}
-                      dezenas={c.dezenas}
-                      compact
-                    />
-                  ))}
-                </div>
+              <div className="relative space-y-3">
+                {fetchingLista && <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center"><Loader2 className="animate-spin" /></div>}
+                {concursos.map((c) => (
+                  <ConcursoCard key={c.concurso} concurso={c.concurso} data={c.data} dezenas={c.dezenas} compact />
+                ))}
               </div>
 
               <div className="flex justify-center items-center gap-4 mt-8">
-                <Button
-                  variant="outline"
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1 || fetchingLista}
-                >
-                  <ChevronLeft className="h-4 w-4" /> Anterior
-                </Button>
-                <span className="text-sm text-muted-foreground">
-                  Página {currentPage} de {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages || fetchingLista}
-                >
-                  Próximo <ChevronRight className="h-4 w-4" />
-                </Button>
+                <Button variant="outline" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}>Anterior</Button>
+                <span>Página {currentPage} de {totalPages}</span>
+                <Button variant="outline" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages}>Próximo</Button>
               </div>
             </>
           )}
