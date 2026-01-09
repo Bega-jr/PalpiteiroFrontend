@@ -20,7 +20,7 @@ const BASE_URL = "https://palpiteiro-backend.vercel.app";
 
 interface Concurso {
   concurso: number;
-  data: string; // Agora recebemos "DD/MM/YYYY" direto do backend
+  data: string; // Recebe "DD/MM/YYYY" direto do Python
   dezenas: number[];
 }
 
@@ -72,7 +72,7 @@ export default function Resultados() {
         <div className="container flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold">Resultados Oficiais</h1>
-            <p className="text-white/80">Datas processadas via Backend (Brasília).</p>
+            <p className="text-white/80">Base de dados sincronizada - 2026</p>
           </div>
           <Button onClick={forceRefresh} variant="outline" className="bg-white text-primary">
             <RefreshCw className={`h-4 w-4 mr-2 ${fetchingLista ? "animate-spin" : ""}`} />
@@ -100,7 +100,11 @@ export default function Resultados() {
           <section>
             <h2 className="text-xl font-bold mb-4">Busca: Concurso {searchConcurso}</h2>
             {loadingBusca ? <LoadingList /> : concursoBuscado ? (
-              <ConcursoCard concurso={concursoBuscado.concurso} data={concursoBuscado.data} dezenas={concursoBuscado.dezenas} />
+              <ConcursoCard 
+                concurso={concursoBuscado.concurso} 
+                data={concursoBuscado.data} 
+                dezenas={concursoBuscado.dezenas} 
+              />
             ) : <p className="text-center">Não encontrado.</p>}
           </section>
         )}
@@ -110,15 +114,25 @@ export default function Resultados() {
           {loadingLista ? <LoadingList /> : (
             <>
               <div className="relative space-y-3">
-                {fetchingLista && <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center"><Loader2 className="animate-spin" /></div>}
+                {fetchingLista && (
+                  <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center">
+                    <Loader2 className="animate-spin text-primary" />
+                  </div>
+                )}
                 {concursos.map((c) => (
-                  <ConcursoCard key={c.concurso} concurso={c.concurso} data={c.data} dezenas={c.dezenas} compact />
+                  <ConcursoCard 
+                    key={c.concurso} 
+                    concurso={c.concurso} 
+                    data={c.data} // Exibe a string "DD/MM/YYYY" sem transformações
+                    dezenas={c.dezenas} 
+                    compact 
+                  />
                 ))}
               </div>
 
               <div className="flex justify-center items-center gap-4 mt-8">
                 <Button variant="outline" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}>Anterior</Button>
-                <span>Página {currentPage} de {totalPages}</span>
+                <span className="text-sm">Página {currentPage} de {totalPages}</span>
                 <Button variant="outline" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages}>Próximo</Button>
               </div>
             </>
@@ -128,4 +142,3 @@ export default function Resultados() {
     </Layout>
   );
 }
-
