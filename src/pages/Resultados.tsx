@@ -20,7 +20,7 @@ const BASE_URL = "https://palpiteiro-backend.vercel.app";
 
 interface Concurso {
   concurso: number;
-  data: string; // Recebe "DD/MM/YYYY" direto do Python
+  data: string;
   dezenas: number[];
 }
 
@@ -35,53 +35,85 @@ export default function Resultados() {
     queryClient.invalidateQueries({ queryKey: ["total-concursos"] });
   };
 
+  // Busca Total de Concursos
   const { data: totalData } = useQuery({
     queryKey: ["total-concursos"],
     queryFn: async () => {
       const res = await fetch(`${BASE_URL}/resultados/total`);
+      if (!res.ok) throw new Error("Erro ao buscar total");
       return res.json();
     },
+    staleTime: 10 * 60 * 1000,
   });
 
   const total = totalData?.total ?? 0;
   const totalPages = Math.ceil(total / limit);
 
-  const { data: listaData, isLoading: loadingLista, isFetching: fetchingLista } = useQuery({
+  // Busca Lista Paginada
+  const {
+    data: listaData,
+    isLoading: loadingLista,
+    isError: errorLista,
+    isFetching: fetchingLista,
+  } = useQuery({
     queryKey: ["resultados", currentPage],
     queryFn: async () => {
-      const res = await fetch(`${BASE_URL}/resultados?page=${currentPage}&limit=${limit}`);
+      const url = `${BASE_URL}/resultados?page=${currentPage}&limit=${limit}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Erro ao carregar resultados");
       return res.json();
     },
   });
 
   const concursos: Concurso[] = listaData?.resultados ?? [];
 
-  const { data: concursoBuscado, isLoading: loadingBusca } = useQuery({
+  // Busca Única (Pesquisa)
+  const {
+    data: concursoBuscado,
+    isLoading: loadingBusca,
+    isError: errorBusca,
+  } = useQuery({
     queryKey: ["concurso", searchConcurso],
     queryFn: async () => {
-      const res = await fetch(`${BASE_URL}/resultados/${searchConcurso}`);
+      const num = Number(searchConcurso);
+      if (!num) return null;
+      const res = await fetch(`${BASE_URL}/resultados/${num}`);
+      if (!res.ok) return null;
       const json = await res.json();
       return json.concurso;
     },
     enabled: !!searchConcurso,
+    retry: false,
   });
 
   return (
     <Layout>
-      <section className="gradient-hero text-primary-foreground py-12">
+      {/* Header */}
+      <section className="gradient-hero text-primary-foreground py-12 md:py-16">
         <div className="container flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold">Resultados Oficiais</h1>
-            <p className="text-white/80">Base de dados sincronizada - 2026</p>
+          <div className="max-w-2xl">
+            <h1 className="font-display text-3xl md:text-4xl font-bold mb-4">
+              Resultados Oficiais
+            </h1>
+            <p className="text-white/80">
+              Exibindo dados brutos do Supabase (Sincronizado 2026).
+            </p>
           </div>
-          <Button onClick={forceRefresh} variant="outline" className="bg-white text-primary">
-            <RefreshCw className={`h-4 w-4 mr-2 ${fetchingLista ? "animate-spin" : ""}`} />
+          <Button
+            onClick={forceRefresh}
+            variant="outline"
+            size="sm"
+            disabled={fetchingLista}
+            className="gap-2 bg-white text-primary hover:bg-slate-100"
+          >
+            <RefreshCw className={`h-4 w-4 ${fetchingLista ? "animate-spin" : ""}`} />
             Sincronizar
           </Button>
         </div>
       </section>
 
-      <div className="container py-8 space-y-8">
+      <div className="container py-8 md:py-12 space-y-8">
+        {/* Busca */}
         <Card>
           <CardContent className="p-6">
             <form onSubmit={(e) => e.preventDefault()} className="flex gap-4">
@@ -91,49 +123,102 @@ export default function Resultados() {
                 value={searchConcurso}
                 onChange={(e) => setSearchConcurso(e.target.value)}
               />
-              <Button type="submit"><Search className="h-4 w-4 mr-2" /> Buscar</Button>
+              <Button type="submit" disabled={!searchConcurso || loadingBusca}>
+                <Search className="mr-2 h-4 w-4" />
+                Buscar
+              </Button>
             </form>
           </CardContent>
         </Card>
 
+        {/* Resultado da Busca */}
         {searchConcurso && (
           <section>
-            <h2 className="text-xl font-bold mb-4">Busca: Concurso {searchConcurso}</h2>
-            {loadingBusca ? <LoadingList /> : concursoBuscado ? (
-              <ConcursoCard 
-                concurso={concursoBuscado.concurso} 
-                data={concursoBuscado.data} 
-                dezenas={concursoBuscado.dezenas} 
+            <h2 className="font-display text-xl font-bold mb-4 flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-lottery-gold" />
+              Concurso {searchConcurso}
+            </h2>
+
+            {loadingBusca ? (
+              <LoadingList />
+            ) : errorBusca || !concursoBuscado ? (
+              <Card>
+                <CardContent className="p-6 text-center">
+                  Concurso não encontrado ou erro na busca.
+                </CardContent>
+              </Card>
+            ) : (
+              <ConcursoCard
+                concurso={concursoBuscado.concurso}
+                data={concursoBuscado.data}
+                dezenas={concursoBuscado.dezenas}
               />
-            ) : <p className="text-center">Não encontrado.</p>}
+            )}
           </section>
         )}
 
+        {/* Lista Principal */}
         <section>
-          <h2 className="text-xl font-bold mb-4">Últimos Resultados</h2>
-          {loadingLista ? <LoadingList /> : (
+          <h2 className="font-display text-xl font-bold mb-4 flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-primary" />
+            Últimos Resultados
+          </h2>
+
+          {loadingLista ? (
+            <LoadingList />
+          ) : errorLista ? (
+            <Card>
+              <CardContent className="p-6 text-destructive text-center">
+                <AlertCircle className="h-5 w-5 inline mr-2" />
+                Erro ao carregar resultados.
+              </CardContent>
+            </Card>
+          ) : (
             <>
-              <div className="relative space-y-3">
-                {fetchingLista && (
-                  <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center">
-                    <Loader2 className="animate-spin text-primary" />
-                  </div>
+              <div className="relative">
+                {fetchingLista && !loadingLista && (
+                    <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-10">
+                        <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                    </div>
                 )}
-                {concursos.map((c) => (
-                  <ConcursoCard 
-                    key={c.concurso} 
-                    concurso={c.concurso} 
-                    data={c.data} // Exibe a string "DD/MM/YYYY" sem transformações
-                    dezenas={c.dezenas} 
-                    compact 
-                  />
-                ))}
+                
+                <div className="space-y-3">
+                  {concursos.map((c) => (
+                    <ConcursoCard
+                      key={c.concurso}
+                      concurso={c.concurso}
+                      // Passa a string EXATAMENTE como veio do banco/backend
+                      data={c.data} 
+                      dezenas={c.dezenas}
+                      compact
+                    />
+                  ))}
+                </div>
               </div>
 
+              {/* Paginação */}
               <div className="flex justify-center items-center gap-4 mt-8">
-                <Button variant="outline" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}>Anterior</Button>
-                <span className="text-sm">Página {currentPage} de {totalPages}</span>
-                <Button variant="outline" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages}>Próximo</Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1 || fetchingLista}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Anterior
+                </Button>
+
+                <span className="text-sm text-muted-foreground">
+                  Página {currentPage} de {totalPages}
+                </span>
+
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages || fetchingLista}
+                >
+                  Próximo
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
               </div>
             </>
           )}
@@ -142,3 +227,4 @@ export default function Resultados() {
     </Layout>
   );
 }
+
