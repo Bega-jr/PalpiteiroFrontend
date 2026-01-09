@@ -4,7 +4,7 @@ import { Layout } from "@/components/Layout";
 import { ConcursoCard } from "@/components/ConcursoCard";
 import { LoadingCard } from "@/components/LoadingStates";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"; // Importar Header e Title tbm
 import { Badge } from "@/components/ui/badge";
 import { getUltimoConcurso } from "@/lib/api";
 import {
@@ -15,6 +15,17 @@ import {
   Info,
   MapPin,
 } from "lucide-react";
+
+// Importações para a tabela (garantir que estão corretas)
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
 
 function Home() {
   const queryClient = useQueryClient();
@@ -29,35 +40,66 @@ function Home() {
     queryClient.invalidateQueries({ queryKey: ["home"] });
   };
 
-  const formatarMoeda = (valor: any) =>
+  const formatarMoeda = (valor) =>
     Number(valor || 0).toLocaleString("pt-BR", {
       style: "currency",
       currency: "BRL",
     });
 
-  const dezenas = c?.dezenas?.map((d: any) => Number(d)) || [];
-  const pares = c?.pares ?? dezenas.filter((n: number) => n % 2 === 0).length;
-  const impares =
-    c?.impares ?? dezenas.length - pares;
-  const somaTotal = c?.soma ?? dezenas.reduce((a: number, b: number) => a + b, 0);
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="container py-12">
+           <LoadingCard />
+        </div>
+      </Layout>
+    );
+  }
 
-  const estaAcumulado =
-    c?.acumulado === true || Number(c?.ganhadores_15) === 0;
+  if (!c) {
+     return (
+      <Layout>
+        <div className="container py-20 text-center">
+          Não foi possível carregar os dados do último concurso.
+        </div>
+      </Layout>
+    );
+  }
+
+  // Dados do Concurso 3582
+  const dezenas = c.dezenas.map((d) => Number(d));
+  const pares = c.pares;
+  const impares = c.impares;
+  const somaTotal = c.soma;
+  const estaAcumulado = c.acumulado;
+  const ganhadores15 = Number(c.ganhadores_15 || 0);
+
+  // CORREÇÃO CRÍTICA: Faz o parsing da string JSON dos municípios
+  let municipios = [];
+  try {
+    // Se o campo municipios não for nulo ou vazio, faz o parse
+    if (c.municipios) {
+        municipios = JSON.parse(c.municipios);
+    }
+  } catch (e) {
+    console.error("Erro ao fazer parse dos municípios:", e);
+  }
+
 
   return (
     <Layout>
-      {/* HERO */}
+      {/* HERO SECTION */}
       <section className="gradient-hero text-primary-foreground py-16 md:py-24 text-center">
         <div className="container space-y-6 animate-fade-in">
           <div className="inline-flex items-center gap-2 bg-white/10 rounded-full px-4 py-2 text-sm border border-white/10">
             <Sparkles className="h-4 w-4 text-yellow-300" />
-            Estatísticas Lotofácil Atualizadas
+            Estatísticas Lotofácil Atualizadas (2026)
           </div>
           <h1 className="font-display text-4xl md:text-6xl font-bold">
-            Aumente suas <span className="text-primary">Chances</span>
+            Confira o Resultado Oficial
           </h1>
           <p className="text-lg text-white/80 max-w-2xl mx-auto">
-            Dados oficiais, estatísticas reais e detalhamento completo do último sorteio.
+            Concurso {c.concurso} - {c.data}
           </p>
           <Button asChild size="lg" className="gradient-accent shadow-glow">
             <Link to="/palpites">Gerar Palpites</Link>
@@ -69,9 +111,9 @@ function Home() {
       <section className="py-12 container">
         <div className="flex items-center justify-between mb-8">
           <h2 className="font-display text-2xl font-bold">
-            Resultado Oficial
+            Resultado Completo
           </h2>
-          <Button
+           <Button
             onClick={forceRefresh}
             variant="outline"
             size="sm"
@@ -83,18 +125,16 @@ function Home() {
           </Button>
         </div>
 
-        {isLoading ? (
-          <LoadingCard />
-        ) : c ? (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-6">
-            {/* CONCURSO */}
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-6">
+            
+            {/* CONCURSO CARD (DEZENAS SORTeadas) */}
             <ConcursoCard
               concurso={c.concurso}
               data={c.data}
               dezenas={dezenas}
             />
 
-            {/* DASHBOARD */}
+            {/* DASHBOARD E PRÊMIO PRINCIPAL */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Card className="border-none shadow-md bg-slate-950 text-white">
                 <CardContent className="p-6">
@@ -139,17 +179,17 @@ function Home() {
               </Card>
             </div>
 
-            {/* MUNICÍPIOS */}
-            {Array.isArray(c.municipios) && c.municipios.length > 0 && (
+            {/* CIDADES PREMIADAS (Agora usando o array parsed) */}
+            {municipios.length > 0 && (
               <Card className="border-none shadow-sm bg-white">
-                <div className="bg-red-50 px-6 py-3 border-b flex items-center gap-2">
+                <CardHeader className="bg-red-50 px-6 py-3 border-b flex flex-row items-center gap-2">
                   <MapPin className="h-4 w-4 text-red-500" />
-                  <h3 className="font-bold text-xs uppercase text-red-700">
-                    Cidades Premiadas (15 acertos)
-                  </h3>
-                </div>
+                  <CardTitle className="font-bold text-xs uppercase text-red-700">
+                    {ganhadores15} {ganhadores15 === 1 ? 'Aposta Ganhadora' : 'Apostas Ganhadoras'} (15 acertos)
+                  </CardTitle>
+                </CardHeader>
                 <CardContent className="p-4 flex flex-wrap gap-2">
-                  {c.municipios.map((m: any, i: number) => (
+                  {municipios.map((m, i) => (
                     <div
                       key={i}
                       className="flex items-center gap-2 bg-gray-50 border px-3 py-2 rounded-xl text-sm"
@@ -167,11 +207,11 @@ function Home() {
               </Card>
             )}
 
-            {/* RATEIO */}
+            {/* TABELA DE RATEIO COMPLETA */}
             <Card className="border-none shadow-md bg-white overflow-hidden">
               <div className="bg-muted/30 px-6 py-4 border-b flex items-center gap-2">
                 <Trophy className="h-4 w-4 text-yellow-500" />
-                <h3 className="font-bold text-sm uppercase">Rateio</h3>
+                <h3 className="font-bold text-sm uppercase">Rateio Oficial</h3>
               </div>
               <CardContent className="p-0">
                 {[15, 14, 13, 12, 11].map((n) => (
@@ -193,17 +233,13 @@ function Home() {
 
             <div className="flex justify-center text-muted-foreground text-[10px] gap-2">
               <Info className="h-3 w-3" />
-              Arrecadação total: {formatarMoeda(c.arrecadacao)}
+              Arrecadação total do concurso {c.concurso}: {formatarMoeda(c.arrecadacao)}
             </div>
-          </div>
-        ) : (
-          <div className="text-center py-20">
-            Não foi possível carregar os dados.
-          </div>
-        )}
+        </div>
       </section>
     </Layout>
   );
 }
 
 export default Home;
+
