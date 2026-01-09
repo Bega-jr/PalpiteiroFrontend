@@ -13,7 +13,7 @@ import {
   ChevronRight,
   RefreshCw,
   AlertCircle,
-  Loader2, // Novo ícone de loading
+  Loader2,
 } from "lucide-react";
 
 const BASE_URL = "https://palpiteiro-backend.vercel.app";
@@ -59,7 +59,7 @@ export default function Resultados() {
     data: listaData,
     isLoading: loadingLista,
     isError: errorLista,
-    isFetching: fetchingLista, // Este é o estado crucial que indica que está recarregando
+    isFetching: fetchingLista,
   } = useQuery({
     queryKey: ["resultados", currentPage],
     queryFn: async () => {
@@ -69,14 +69,15 @@ export default function Resultados() {
       if (!res.ok) throw new Error("Erro ao carregar resultados");
       return res.json();
     },
-    keepPreviousData: true, // Mantém dados anteriores enquanto carrega a nova página
-    staleTime: 0, // Sempre verifica por novos dados
+    keepPreviousData: true,
+    staleTime: 0,
+    cacheTime: 5 * 60 * 1000,
   });
 
   const concursos: Concurso[] = listaData?.resultados ?? [];
 
   // ===============================
-  // 🔹 BUSCA POR CONCURSO (mantida igual)
+  // 🔹 BUSCA POR CONCURSO
   // ===============================
   const {
     data: concursoBuscado,
@@ -96,7 +97,7 @@ export default function Resultados() {
       }
 
       const json = await res.json();
-      return json.concurso; // Sua API retorna {status, concurso: {...}}
+      return json.concurso;
     },
     enabled: !!searchConcurso,
     retry: false,
@@ -133,54 +134,70 @@ export default function Resultados() {
       </section>
 
       <div className="container py-8 md:py-12 space-y-8">
-        {/* Busca e Resultado da Busca permanecem iguais */}
-        {/* ... */}
-        {searchConcurso && (
-            <section>
-                <h2 className="font-display text-xl font-bold mb-4 flex items-center gap-2">
-                <Trophy className="h-5 w-5 text-lottery-gold" />
-                Concurso {searchConcurso}
-                </h2>
+        {/* Busca */}
+        <Card>
+          <CardContent className="p-6">
+            <form onSubmit={handleSearch} className="flex gap-4">
+              <Input
+                type="number"
+                placeholder="Buscar por número do concurso..."
+                value={searchConcurso}
+                onChange={(e) => setSearchConcurso(e.target.value)}
+              />
+              <Button type="submit" disabled={!searchConcurso || loadingBusca}>
+                <Search className="mr-2 h-4 w-4" />
+                Buscar
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
 
-                {loadingBusca ? (
-                <LoadingList />
-                ) : errorBusca ? (
-                <Card>
-                    <CardContent className="p-6 text-destructive text-center">
-                    Erro ao buscar concurso
-                    </CardContent>
-                </Card>
-                ) : concursoBuscado ? (
-                <ConcursoCard
-                    concurso={concursoBuscado.concurso}
-                    data={concursoBuscado.data}
-                    dezenas={concursoBuscado.dezenas}
-                />
-                ) : (
-                <Card>
-                    <CardContent className="p-6 text-destructive text-center">
-                    Concurso não encontrado
-                    </CardContent>
-                </Card>
-                )}
-            </section>
+        {/* Resultado da Busca */}
+        {searchConcurso && (
+          <section>
+            <h2 className="font-display text-xl font-bold mb-4 flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-lottery-gold" />
+              Concurso {searchConcurso}
+            </h2>
+
+            {loadingBusca ? (
+              <LoadingList />
+            ) : errorBusca ? (
+              <Card>
+                <CardContent className="p-6 text-destructive text-center">
+                  Erro ao buscar concurso
+                </CardContent>
+              </Card>
+            ) : concursoBuscado ? (
+              <ConcursoCard
+                concurso={concursoBuscado.concurso}
+                data={concursoBuscado.data}
+                dezenas={concursoBuscado.dezenas}
+              />
+            ) : (
+              <Card>
+                <CardContent className="p-6 text-destructive text-center">
+                  Concurso não encontrado
+                </CardContent>
+              </Card>
+            )}
+          </section>
         )}
 
-
-        {/* LISTA DE RESULTADOS */}
+        {/* Lista */}
         <section>
           <h2 className="font-display text-xl font-bold mb-4 flex items-center gap-2">
             <Trophy className="h-5 w-5 text-primary" />
             Últimos Resultados
           </h2>
 
-          {/* TRATAMENTO DE ESTADOS DE CARREGAMENTO */}
           {loadingLista ? (
             <LoadingList />
           ) : errorLista ? (
             <Card>
               <CardContent className="p-6 text-destructive text-center">
-                <AlertCircle className="h-5 w-5 inline mr-2""")/>>
+                {/* CORREÇÃO AQUI: Sintaxe do JSX corrigida */}
+                <AlertCircle className="h-5 w-5 inline mr-2" />
                 Erro ao carregar resultados.
               </CardContent>
             </Card>
@@ -239,5 +256,7 @@ export default function Resultados() {
       </div>
     </Layout>
   );
+}
+
 }
 
