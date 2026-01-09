@@ -215,17 +215,30 @@ export default function Resultados() {
                 )}
                 
                 <div className="space-y-3">
-                  {concursos.map((c) => (
-                    <ConcursoCard
-                      key={c.concurso}
-                      concurso={c.concurso}
-                      data={c.data}
-                      dezenas={c.dezenas}
-                      compact
-                    />
-                  ))}
+                  {concursos.map((c) => {
+                    // CORREÇÃO AQUI: Extraímos a parte da data e formatamos manualmente
+                    // Isso evita que o JavaScript aplique o fuso horário (UTC-3)
+                    const formatarDataManual = (dataIso: string) => {
+                      if (!dataIso) return "";
+                      // Remove qualquer parte de tempo e separa os componentes
+                      const [ano, mes, dia] = dataIso.split("T")[0].split("-");
+                      return `${dia}/${mes}/${ano}`;
+                    };
+          
+                    return (
+                      <ConcursoCard
+                        key={c.concurso}
+                        concurso={c.concurso}
+                        // Enviamos a data já formatada como string DD/MM/YYYY
+                        data={formatarDataManual(c.data)}
+                        dezenas={c.dezenas}
+                        compact
+                      />
+                    );
+                  })}
                 </div>
               </div>
+
 
               {/* Paginação */}
               <div className="flex justify-center items-center gap-4 mt-8">
