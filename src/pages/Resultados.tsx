@@ -215,28 +215,34 @@ export default function Resultados() {
                 )}
                 
                 <div className="space-y-3">
-                  {concursos.map((c) => {
-                    // CORREÇÃO AQUI: Extraímos a parte da data e formatamos manualmente
-                    // Isso evita que o JavaScript aplique o fuso horário (UTC-3)
-                    const formatarDataManual = (dataIso: string) => {
-                      if (!dataIso) return "";
-                      // Remove qualquer parte de tempo e separa os componentes
-                      const [ano, mes, dia] = dataIso.split("T")[0].split("-");
-                      return `${dia}/${mes}/${ano}`;
-                    };
-          
-                    return (
-                      <ConcursoCard
-                        key={c.concurso}
-                        concurso={c.concurso}
-                        // Enviamos a data já formatada como string DD/MM/YYYY
-                        data={formatarDataManual(c.data)}
-                        dezenas={c.dezenas}
-                        compact
-                      />
-                    );
-                  })}
-                </div>
+                {concursos.map((c) => {
+                  // FUNÇÃO CORRIGIDA:
+                  const formatarDataManual = (dataIso: string) => {
+                    if (!dataIso) return "";
+                    
+                    // Pega apenas a parte da data (YYYY-MM-DD) caso venha com timestamp
+                    const apenasData = dataIso.split("T")[0];
+                    
+                    // Divide os componentes pelo hífen
+                    const partes = apenasData.split("-");
+                    
+                    if (partes.length !== 3) return dataIso;
+              
+                    const [ano, mes, dia] = partes;
+                    return `${dia}/${mes}/${ano}`;
+                  };
+              
+                  return (
+                    <ConcursoCard
+                      key={c.concurso}
+                      concurso={c.concurso}
+                      // Agora envia 08/01/2026 ou 29/09/2003 corretamente
+                      data={formatarDataManual(c.data)}
+                      dezenas={c.dezenas}
+                      compact
+                    />
+                  );
+                })}
               </div>
 
 
