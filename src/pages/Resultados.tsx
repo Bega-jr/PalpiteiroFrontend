@@ -31,18 +31,30 @@ export default function Resultados() {
   const [currentPage, setCurrentPage] = useState(1);
   const limit = 10;
 
-  // Função auxiliar para formatar a data vinda do Supabase (YYYY-MM-DD) para (DD/MM/YYYY)
-  // Isso evita o erro de D-1 causado pelo fuso horário do navegador
-  const formatarDataLocal = (dataIso: string) => {
-    if (!dataIso) return "";
+  /**
+   * FORMATAÇÃO DE DATA - SOLUÇÃO DEFINITIVA
+   * Recebe "2026-01-08" e garante que vire "08/01/2026"
+   * Ignora fuso horário e evita inversão de dia/mês.
+   */
+  const formatarDataBr = (dataRaw: string) => {
+    if (!dataRaw) return "";
     try {
-      const apenasData = dataIso.split("T")[0];
+      // 1. Pega apenas a data (YYYY-MM-DD) ignorando horas se houver
+      const apenasData = dataRaw.includes("T") ? dataRaw.split("T")[0] : dataRaw.split(" ")[0];
+      
+      // 2. Divide pelos hífens
       const partes = apenasData.split("-");
-      if (partes.length !== 3) return dataIso;
-      const [ano, mes, dia] = partes;
+      
+      if (partes.length !== 3) return dataRaw;
+
+      // 3. Atribuição explícita para não inverter
+      const ano = partes[0];
+      const mes = partes[1];
+      const dia = partes[2];
+
       return `${dia}/${mes}/${ano}`;
     } catch (e) {
-      return dataIso;
+      return dataRaw;
     }
   };
 
@@ -79,7 +91,6 @@ export default function Resultados() {
       return res.json();
     },
     placeholderData: (previousData) => previousData,
-    staleTime: 0,
   });
 
   const concursos: Concurso[] = listaData?.resultados ?? [];
@@ -102,13 +113,8 @@ export default function Resultados() {
     retry: false,
   });
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-  };
-
   return (
     <Layout>
-      {/* Header */}
       <section className="gradient-hero text-primary-foreground py-12 md:py-16">
         <div className="container flex justify-between items-center">
           <div className="max-w-2xl">
@@ -116,7 +122,7 @@ export default function Resultados() {
               Resultados Oficiais
             </h1>
             <p className="text-white/80">
-              Resultados da Lotofácil atualizados automaticamente via Supabase.
+              Resultados da Lotofácil carregados do Supabase.
             </p>
           </div>
           <Button
@@ -133,13 +139,12 @@ export default function Resultados() {
       </section>
 
       <div className="container py-8 md:py-12 space-y-8">
-        {/* Busca */}
         <Card>
           <CardContent className="p-6">
-            <form onSubmit={handleSearch} className="flex gap-4">
+            <form onSubmit={(e) => e.preventDefault()} className="flex gap-4">
               <Input
                 type="number"
-                placeholder="Buscar por número do concurso..."
+                placeholder="Buscar concurso (ex: 3582)..."
                 value={searchConcurso}
                 onChange={(e) => setSearchConcurso(e.target.value)}
               />
@@ -151,39 +156,28 @@ export default function Resultados() {
           </CardContent>
         </Card>
 
-        {/* Resultado da Busca */}
         {searchConcurso && (
           <section>
             <h2 className="font-display text-xl font-bold mb-4 flex items-center gap-2">
               <Trophy className="h-5 w-5 text-lottery-gold" />
               Concurso {searchConcurso}
             </h2>
-
             {loadingBusca ? (
               <LoadingList />
             ) : errorBusca ? (
-              <Card>
-                <CardContent className="p-6 text-destructive text-center">
-                  Erro ao buscar concurso
-                </CardContent>
-              </Card>
+              <Card><CardContent className="p-6 text-destructive text-center">Erro na busca</CardContent></Card>
             ) : concursoBuscado ? (
               <ConcursoCard
                 concurso={concursoBuscado.concurso}
-                data={formatarDataLocal(concursoBuscado.data)}
+                data={formatarDataBr(concursoBuscado.data)}
                 dezenas={concursoBuscado.dezenas}
               />
             ) : (
-              <Card>
-                <CardContent className="p-6 text-destructive text-center">
-                  Concurso não encontrado
-                </CardContent>
-              </Card>
+              <Card><CardContent className="p-6 text-center">Não encontrado</CardContent></Card>
             )}
           </section>
         )}
 
-        {/* Lista */}
         <section>
           <h2 className="font-display text-xl font-bold mb-4 flex items-center gap-2">
             <Trophy className="h-5 w-5 text-primary" />
@@ -195,7 +189,6 @@ export default function Resultados() {
           ) : errorLista ? (
             <Card>
               <CardContent className="p-6 text-destructive text-center">
-                <AlertCircle className="h-5 w-5 inline mr-2" />
                 Erro ao carregar resultados.
               </CardContent>
             </Card>
@@ -207,13 +200,12 @@ export default function Resultados() {
                     <Loader2 className="h-8 w-8 text-primary animate-spin" />
                   </div>
                 )}
-                
                 <div className="space-y-3">
                   {concursos.map((c) => (
                     <ConcursoCard
                       key={c.concurso}
                       concurso={c.concurso}
-                      data={formatarDataLocal(c.data)}
+                      data={formatarDataBr(c.data)}
                       dezenas={c.dezenas}
                       compact
                     />
@@ -221,28 +213,23 @@ export default function Resultados() {
                 </div>
               </div>
 
-              {/* Paginação */}
               <div className="flex justify-center items-center gap-4 mt-8">
                 <Button
                   variant="outline"
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1 || fetchingLista}
                 >
-                  <ChevronLeft className="h-4 w-4" />
-                  Anterior
+                  <ChevronLeft className="h-4 w-4" /> Anterior
                 </Button>
-
                 <span className="text-sm text-muted-foreground">
                   Página {currentPage} de {totalPages}
                 </span>
-
                 <Button
                   variant="outline"
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages || fetchingLista}
                 >
-                  Próximo
-                  <ChevronRight className="h-4 w-4" />
+                  Próximo <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
             </>
