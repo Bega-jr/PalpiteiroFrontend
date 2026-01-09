@@ -32,29 +32,39 @@ export default function Resultados() {
   const limit = 10;
 
   /**
-   * FORMATAÇÃO DE DATA - SOLUÇÃO DEFINITIVA
-   * Recebe "2026-01-08" e garante que vire "08/01/2026"
-   * Ignora fuso horário e evita inversão de dia/mês.
+   * FORMATAÇÃO DE DATA À PROVA DE ERROS
    */
-  const formatarDataBr = (dataRaw: string) => {
-    if (!dataRaw) return "";
+  const formatarDataFinal = (dataRaw: any) => {
+    if (!dataRaw || typeof dataRaw !== 'string') return "Data não disponível";
+
     try {
-      // 1. Pega apenas a data (YYYY-MM-DD) ignorando horas se houver
-      const apenasData = dataRaw.includes("T") ? dataRaw.split("T")[0] : dataRaw.split(" ")[0];
-      
-      // 2. Divide pelos hífens
-      const partes = apenasData.split("-");
-      
-      if (partes.length !== 3) return dataRaw;
+      // 1. Se a data já estiver no formato brasileiro (DD/MM/YYYY), retorna direto
+      if (dataRaw.includes('/') && dataRaw.split('/').length === 3) {
+        return dataRaw;
+      }
 
-      // 3. Atribuição explícita para não inverter
-      const ano = partes[0];
-      const mes = partes[1];
-      const dia = partes[2];
+      // 2. Limpa a string de possíveis timestamps (T00:00:00 ou espaço)
+      const dataApenas = dataRaw.split('T')[0].split(' ')[0];
+      
+      // 3. Verifica se é o formato ISO (YYYY-MM-DD)
+      const partes = dataApenas.split('-');
+      if (partes.length === 3) {
+        const [ano, mes, dia] = partes;
+        // Garante que o ano tenha 4 dígitos para ser válido
+        if (ano.length === 4) {
+          return `${dia}/${mes}/${ano}`;
+        }
+      }
 
-      return `${dia}/${mes}/${ano}`;
+      // 4. Se nada funcionar, tenta o Date padrão como último recurso
+      const d = new Date(dataRaw);
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+      }
+
+      return dataRaw; // Retorna o que veio se não conseguir formatar
     } catch (e) {
-      return dataRaw;
+      return "Data inválida";
     }
   };
 
@@ -122,7 +132,7 @@ export default function Resultados() {
               Resultados Oficiais
             </h1>
             <p className="text-white/80">
-              Resultados da Lotofácil carregados do Supabase.
+              Resultados da Lotofácil (Base 2026).
             </p>
           </div>
           <Button
@@ -144,13 +154,12 @@ export default function Resultados() {
             <form onSubmit={(e) => e.preventDefault()} className="flex gap-4">
               <Input
                 type="number"
-                placeholder="Buscar concurso (ex: 3582)..."
+                placeholder="Número do concurso..."
                 value={searchConcurso}
                 onChange={(e) => setSearchConcurso(e.target.value)}
               />
               <Button type="submit" disabled={!searchConcurso || loadingBusca}>
-                <Search className="mr-2 h-4 w-4" />
-                Buscar
+                <Search className="mr-2 h-4 w-4" /> Buscar
               </Button>
             </form>
           </CardContent>
@@ -164,16 +173,14 @@ export default function Resultados() {
             </h2>
             {loadingBusca ? (
               <LoadingList />
-            ) : errorBusca ? (
-              <Card><CardContent className="p-6 text-destructive text-center">Erro na busca</CardContent></Card>
             ) : concursoBuscado ? (
               <ConcursoCard
                 concurso={concursoBuscado.concurso}
-                data={formatarDataBr(concursoBuscado.data)}
+                data={formatarDataFinal(concursoBuscado.data)}
                 dezenas={concursoBuscado.dezenas}
               />
             ) : (
-              <Card><CardContent className="p-6 text-center">Não encontrado</CardContent></Card>
+              <Card><CardContent className="p-6 text-center">Concurso não encontrado</CardContent></Card>
             )}
           </section>
         )}
@@ -186,12 +193,6 @@ export default function Resultados() {
 
           {loadingLista ? (
             <LoadingList />
-          ) : errorLista ? (
-            <Card>
-              <CardContent className="p-6 text-destructive text-center">
-                Erro ao carregar resultados.
-              </CardContent>
-            </Card>
           ) : (
             <>
               <div className="relative">
@@ -205,7 +206,7 @@ export default function Resultados() {
                     <ConcursoCard
                       key={c.concurso}
                       concurso={c.concurso}
-                      data={formatarDataBr(c.data)}
+                      data={formatarDataFinal(c.data)}
                       dezenas={c.dezenas}
                       compact
                     />
