@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query"; // Importe useQueryClient
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Layout } from "@/components/Layout";
 import { ConcursoCard } from "@/components/ConcursoCard";
 import { LoadingList } from "@/components/LoadingStates";
@@ -11,7 +11,9 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
-  RefreshCw, // Importe o ícone de refresh
+  RefreshCw,
+  AlertCircle,
+  Loader2, // Novo ícone de loading
 } from "lucide-react";
 
 const BASE_URL = "https://palpiteiro-backend.vercel.app";
@@ -24,13 +26,11 @@ interface Concurso {
 }
 
 export default function Resultados() {
-  const queryClient = useQueryClient(); // Inicialize o cliente de query
-
+  const queryClient = useQueryClient();
   const [searchConcurso, setSearchConcurso] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const limit = 10;
 
-  // Função para forçar o refresh e invalidar todos os caches de resultados
   const forceRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ["resultados"] });
     queryClient.invalidateQueries({ queryKey: ["total-concursos"] });
@@ -42,7 +42,6 @@ export default function Resultados() {
   const { data: totalData, isFetching: fetchingTotal } = useQuery({
     queryKey: ["total-concursos"],
     queryFn: async () => {
-      // Usa sua rota de backend correta
       const res = await fetch(`${BASE_URL}/resultados/total`);
       if (!res.ok) throw new Error("Erro ao buscar total");
       return res.json();
@@ -60,26 +59,52 @@ export default function Resultados() {
     data: listaData,
     isLoading: loadingLista,
     isError: errorLista,
-    isFetching: fetchingLista,
+    isFetching: fetchingLista, // Este é o estado crucial que indica que está recarregando
   } = useQuery({
     queryKey: ["resultados", currentPage],
     queryFn: async () => {
-      // Usa sua rota de backend correta
       const res = await fetch(
         `${BASE_URL}/resultados?page=${currentPage}&limit=${limit}`
       );
       if (!res.ok) throw new Error("Erro ao carregar resultados");
       return res.json();
     },
-    // keepPreviousData: true, // Removendo para garantir que sempre puxe o mais novo na transição
-    staleTime: 0, // Muda para 0 para que sempre verifique a cada foco na janela
-    cacheTime: 5 * 60 * 1000,
+    keepPreviousData: true, // Mantém dados anteriores enquanto carrega a nova página
+    staleTime: 0, // Sempre verifica por novos dados
   });
 
-  // O backend retorna {status, page, limit, resultados}
-  const concursos: Concurso[] = listaData?.resultados ?? []; 
+  const concursos: Concurso[] = listaData?.resultados ?? [];
 
-  // ... (código de busca por concurso permanece o mesmo) ...
+  // ===============================
+  // 🔹 BUSCA POR CONCURSO (mantida igual)
+  // ===============================
+  const {
+    data: concursoBuscado,
+    isLoading: loadingBusca,
+    isError: errorBusca,
+  } = useQuery({
+    queryKey: ["concurso", searchConcurso],
+    queryFn: async () => {
+      const num = Number(searchConcurso);
+      if (!num) return null;
+
+      const res = await fetch(`${BASE_URL}/resultados/${num}`);
+
+      if (!res.ok) {
+        if (res.status === 404) return null;
+        throw new Error("Erro ao buscar concurso");
+      }
+
+      const json = await res.json();
+      return json.concurso; // Sua API retorna {status, concurso: {...}}
+    },
+    enabled: !!searchConcurso,
+    retry: false,
+  });
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+  };
 
   return (
     <Layout>
@@ -94,7 +119,6 @@ export default function Resultados() {
               Resultados da Lotofácil atualizados automaticamente.
             </p>
           </div>
-          {/* Adiciona o botão de forçar atualização ao lado do título */}
           <Button
             onClick={forceRefresh}
             variant="outline"
@@ -109,9 +133,111 @@ export default function Resultados() {
       </section>
 
       <div className="container py-8 md:py-12 space-y-8">
-        {/* Busca e Lista permanecem iguais */}
+        {/* Busca e Resultado da Busca permanecem iguais */}
         {/* ... */}
+        {searchConcurso && (
+            <section>
+                <h2 className="font-display text-xl font-bold mb-4 flex items-center gap-2">
+                <Trophy className="h-5 w-5 text-lottery-gold" />
+                Concurso {searchConcurso}
+                </h2>
+
+                {loadingBusca ? (
+                <LoadingList />
+                ) : errorBusca ? (
+                <Card>
+                    <CardContent className="p-6 text-destructive text-center">
+                    Erro ao buscar concurso
+                    </CardContent>
+                </Card>
+                ) : concursoBuscado ? (
+                <ConcursoCard
+                    concurso={concursoBuscado.concurso}
+                    data={concursoBuscado.data}
+                    dezenas={concursoBuscado.dezenas}
+                />
+                ) : (
+                <Card>
+                    <CardContent className="p-6 text-destructive text-center">
+                    Concurso não encontrado
+                    </CardContent>
+                </Card>
+                )}
+            </section>
+        )}
+
+
+        {/* LISTA DE RESULTADOS */}
+        <section>
+          <h2 className="font-display text-xl font-bold mb-4 flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-primary" />
+            Últimos Resultados
+          </h2>
+
+          {/* TRATAMENTO DE ESTADOS DE CARREGAMENTO */}
+          {loadingLista ? (
+            <LoadingList />
+          ) : errorLista ? (
+            <Card>
+              <CardContent className="p-6 text-destructive text-center">
+                <AlertCircle className="h-5 w-5 inline mr-2""")/>>
+                Erro ao carregar resultados.
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              {/* Overlay de loading enquanto busca a próxima página */}
+              <div className="relative">
+                {fetchingLista && !loadingLista && (
+                    <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-10">
+                        <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                    </div>
+                )}
+                
+                <div className="space-y-3">
+                  {concursos.map((c) => (
+                    <ConcursoCard
+                      key={c.concurso}
+                      concurso={c.concurso}
+                      data={c.data}
+                      dezenas={c.dezenas}
+                      compact
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Paginação */}
+              <div className="flex justify-center items-center gap-4 mt-8">
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1 || fetchingLista}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Anterior
+                </Button>
+
+                <span className="text-sm text-muted-foreground">
+                  Página {currentPage} de {totalPages}
+                </span>
+
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(totalPages, p + 1))
+                  }
+                  disabled={currentPage >= totalPages || fetchingLista}
+                >
+                  Próxima
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </>
+          )}
+        </section>
       </div>
     </Layout>
   );
 }
+
