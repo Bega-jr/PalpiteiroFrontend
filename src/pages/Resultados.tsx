@@ -31,14 +31,26 @@ export default function Resultados() {
   const [currentPage, setCurrentPage] = useState(1);
   const limit = 10;
 
+  // Função auxiliar para formatar a data vinda do Supabase (YYYY-MM-DD) para (DD/MM/YYYY)
+  // Isso evita o erro de D-1 causado pelo fuso horário do navegador
+  const formatarDataLocal = (dataIso: string) => {
+    if (!dataIso) return "";
+    try {
+      const apenasData = dataIso.split("T")[0];
+      const partes = apenasData.split("-");
+      if (partes.length !== 3) return dataIso;
+      const [ano, mes, dia] = partes;
+      return `${dia}/${mes}/${ano}`;
+    } catch (e) {
+      return dataIso;
+    }
+  };
+
   const forceRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ["resultados"] });
     queryClient.invalidateQueries({ queryKey: ["total-concursos"] });
   };
 
-  // ===============================
-  // 🔹 TOTAL DE CONCURSOS
-  // ===============================
   const { data: totalData, isFetching: fetchingTotal } = useQuery({
     queryKey: ["total-concursos"],
     queryFn: async () => {
@@ -52,9 +64,6 @@ export default function Resultados() {
   const total = totalData?.total ?? 0;
   const totalPages = Math.ceil(total / limit);
 
-   // ===============================
-  // 🔹 LISTA PAGINADA
-  // ===============================
   const {
     data: listaData,
     isLoading: loadingLista,
@@ -63,24 +72,18 @@ export default function Resultados() {
   } = useQuery({
     queryKey: ["resultados", currentPage],
     queryFn: async () => {
-      // ADICIONANDO UM TIMESTAMP PARA FURAR O CACHE DE REDE
-      const cacheBuster = Date.now(); 
+      const cacheBuster = Date.now();
       const url = `${BASE_URL}/resultados?page=${currentPage}&limit=${limit}&_cb=${cacheBuster}`;
-
       const res = await fetch(url);
       if (!res.ok) throw new Error("Erro ao carregar resultados");
       return res.json();
     },
-    keepPreviousData: true,
-    staleTime: 0, 
-    cacheTime: 5 * 60 * 1000,
+    placeholderData: (previousData) => previousData,
+    staleTime: 0,
   });
 
   const concursos: Concurso[] = listaData?.resultados ?? [];
 
-  // ===============================
-  // 🔹 BUSCA POR CONCURSO
-  // ===============================
   const {
     data: concursoBuscado,
     isLoading: loadingBusca,
@@ -90,16 +93,9 @@ export default function Resultados() {
     queryFn: async () => {
       const num = Number(searchConcurso);
       if (!num) return null;
-
       const res = await fetch(`${BASE_URL}/resultados/${num}`);
-
-      if (!res.ok) {
-        if (res.status === 404) return null;
-        throw new Error("Erro ao buscar concurso");
-      }
-
+      if (!res.ok) return null;
       const json = await res.json();
-      // Sua API de busca retorna {status, concurso: {...}}
       return json.concurso;
     },
     enabled: !!searchConcurso,
@@ -120,7 +116,7 @@ export default function Resultados() {
               Resultados Oficiais
             </h1>
             <p className="text-white/80">
-              Resultados da Lotofácil atualizados automaticamente.
+              Resultados da Lotofácil atualizados automaticamente via Supabase.
             </p>
           </div>
           <Button
@@ -174,7 +170,7 @@ export default function Resultados() {
             ) : concursoBuscado ? (
               <ConcursoCard
                 concurso={concursoBuscado.concurso}
-                data={concursoBuscado.data}
+                data={formatarDataLocal(concursoBuscado.data)}
                 dezenas={concursoBuscado.dezenas}
               />
             ) : (
@@ -194,7 +190,6 @@ export default function Resultados() {
             Últimos Resultados
           </h2>
 
-          {/* TRATAMENTO DE ESTADOS DE CARREGAMENTO */}
           {loadingLista ? (
             <LoadingList />
           ) : errorLista ? (
@@ -206,45 +201,25 @@ export default function Resultados() {
             </Card>
           ) : (
             <>
-              {/* Overlay de loading enquanto busca a próxima página */}
               <div className="relative">
                 {fetchingLista && !loadingLista && (
-                    <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-10">
-                        <Loader2 className="h-8 w-8 text-primary animate-spin" />
-                    </div>
+                  <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-10">
+                    <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                  </div>
                 )}
                 
                 <div className="space-y-3">
-                {concursos.map((c) => {
-                  // FUNÇÃO CORRIGIDA:
-                  const formatarDataManual = (dataIso: string) => {
-                    if (!dataIso) return "";
-                    
-                    // Pega apenas a parte da data (YYYY-MM-DD) caso venha com timestamp
-                    const apenasData = dataIso.split("T")[0];
-                    
-                    // Divide os componentes pelo hífen
-                    const partes = apenasData.split("-");
-                    
-                    if (partes.length !== 3) return dataIso;
-              
-                    const [ano, mes, dia] = partes;
-                    return `${dia}/${mes}/${ano}`;
-                  };
-              
-                  return (
+                  {concursos.map((c) => (
                     <ConcursoCard
                       key={c.concurso}
                       concurso={c.concurso}
-                      // Agora envia 08/01/2026 ou 29/09/2003 corretamente
-                      data={formatarDataManual(c.data)}
+                      data={formatarDataLocal(c.data)}
                       dezenas={c.dezenas}
                       compact
                     />
-                  );
-                })}
+                  ))}
+                </div>
               </div>
-
 
               {/* Paginação */}
               <div className="flex justify-center items-center gap-4 mt-8">
@@ -263,12 +238,10 @@ export default function Resultados() {
 
                 <Button
                   variant="outline"
-                  onClick={() =>
-                    setCurrentPage((p) => Math.min(totalPages, p + 1))
-                  }
-                  disabled={currentPage >= totalPages || fetchingLista}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages || fetchingLista}
                 >
-                  Próxima
+                  Próximo
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -279,5 +252,4 @@ export default function Resultados() {
     </Layout>
   );
 }
-
 
