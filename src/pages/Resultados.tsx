@@ -35,6 +35,13 @@ export default function Resultados() {
     queryClient.invalidateQueries({ queryKey: ["total-concursos"] });
   };
 
+  // Função para formatar data sem fuso horário (evita D-1)
+  const formatarDataSemFuso = (data: string | undefined) => {
+    if (!data) return "";
+    // Remove qualquer parte de horário (T00:00:00+) e garante só YYYY-MM-DD
+    return data.split("T")[0] || data;
+  };
+
   // Busca Total de Concursos
   const { data: totalData } = useQuery({
     queryKey: ["total-concursos"],
@@ -138,7 +145,6 @@ export default function Resultados() {
               <Trophy className="h-5 w-5 text-lottery-gold" />
               Concurso {searchConcurso}
             </h2>
-
             {loadingBusca ? (
               <LoadingList />
             ) : errorBusca || !concursoBuscado ? (
@@ -150,7 +156,7 @@ export default function Resultados() {
             ) : (
               <ConcursoCard
                 concurso={concursoBuscado.concurso}
-                data={concursoBuscado.data}
+                data={formatarDataSemFuso(concursoBuscado.data)}  // Correção aqui
                 dezenas={concursoBuscado.dezenas}
               />
             )}
@@ -163,7 +169,6 @@ export default function Resultados() {
             <Trophy className="h-5 w-5 text-primary" />
             Últimos Resultados
           </h2>
-
           {loadingLista ? (
             <LoadingList />
           ) : errorLista ? (
@@ -177,18 +182,17 @@ export default function Resultados() {
             <>
               <div className="relative">
                 {fetchingLista && !loadingLista && (
-                    <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-10">
-                        <Loader2 className="h-8 w-8 text-primary animate-spin" />
-                    </div>
+                  <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-10">
+                    <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                  </div>
                 )}
-                
+
                 <div className="space-y-3">
                   {concursos.map((c) => (
                     <ConcursoCard
                       key={c.concurso}
                       concurso={c.concurso}
-                      // Passa a string EXATAMENTE como veio do banco/backend
-                      data={c.data} 
+                      data={formatarDataSemFuso(c.data)}  // Correção aqui também
                       dezenas={c.dezenas}
                       compact
                     />
@@ -206,11 +210,9 @@ export default function Resultados() {
                   <ChevronLeft className="h-4 w-4" />
                   Anterior
                 </Button>
-
                 <span className="text-sm text-muted-foreground">
                   Página {currentPage} de {totalPages}
                 </span>
-
                 <Button
                   variant="outline"
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
@@ -227,4 +229,3 @@ export default function Resultados() {
     </Layout>
   );
 }
-
