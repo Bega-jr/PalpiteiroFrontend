@@ -97,6 +97,7 @@ export default function Resultados() {
       }
 
       const json = await res.json();
+      // Sua API de busca retorna {status, concurso: {...}}
       return json.concurso;
     },
     enabled: !!searchConcurso,
@@ -191,12 +192,12 @@ export default function Resultados() {
             Últimos Resultados
           </h2>
 
+          {/* TRATAMENTO DE ESTADOS DE CARREGAMENTO */}
           {loadingLista ? (
             <LoadingList />
           ) : errorLista ? (
             <Card>
               <CardContent className="p-6 text-destructive text-center">
-                {/* CORREÇÃO AQUI: Sintaxe do JSX corrigida */}
                 <AlertCircle className="h-5 w-5 inline mr-2" />
                 Erro ao carregar resultados.
               </CardContent>
@@ -258,5 +259,4 @@ export default function Resultados() {
   );
 }
 
-}
 
