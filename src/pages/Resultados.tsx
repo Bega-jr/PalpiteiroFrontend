@@ -52,7 +52,7 @@ export default function Resultados() {
   const total = totalData?.total ?? 0;
   const totalPages = Math.ceil(total / limit);
 
-  // ===============================
+   // ===============================
   // 🔹 LISTA PAGINADA
   // ===============================
   const {
@@ -63,14 +63,16 @@ export default function Resultados() {
   } = useQuery({
     queryKey: ["resultados", currentPage],
     queryFn: async () => {
-      const res = await fetch(
-        `${BASE_URL}/resultados?page=${currentPage}&limit=${limit}`
-      );
+      // ADICIONANDO UM TIMESTAMP PARA FURAR O CACHE DE REDE
+      const cacheBuster = Date.now(); 
+      const url = `${BASE_URL}/resultados?page=${currentPage}&limit=${limit}&_cb=${cacheBuster}`;
+
+      const res = await fetch(url);
       if (!res.ok) throw new Error("Erro ao carregar resultados");
       return res.json();
     },
     keepPreviousData: true,
-    staleTime: 0,
+    staleTime: 0, 
     cacheTime: 5 * 60 * 1000,
   });
 
