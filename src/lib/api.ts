@@ -21,19 +21,18 @@ export const api = axios.create({
 
 /* =====================
    HOME (ÚLTIMO SORTEIO)
-   Fonte única: Supabase
 ===================== */
 export const getUltimoConcurso = async () => {
   const resp = await api.get("/home");
-
-  /**
-   * Contrato padrão do backend:
-   * {
-   *   status: "ok",
-   *   data: { ...vw_lotofacil_stats }
-   * }
-   */
   return resp.data?.data || null;
+};
+
+/* =====================
+   DESEMPENHO DO GERADOR (2026)
+===================== */
+export const getDesempenhoGerador = async (params?: { ano?: number; tipo?: string }) => {
+  const resp = await api.get("/home/desempenho", { params });
+  return resp.data?.dados || null;
 };
 
 /* =====================
@@ -62,3 +61,4 @@ export const getPalpitesEstatisticos = async () => {
    EXPORT DEFAULT
 ===================== */
 export default api;
+
