@@ -28,7 +28,7 @@ function Home() {
   });
 
   // Desempenho do gerador
-  const { data: desempenho } = useQuery({
+  const { data: desempenho, isLoading: isDesempenhoLoading } = useQuery({
     queryKey: ["home-desempenho"],
     queryFn: () => getDesempenhoGerador({ ano: 2026, tipo: "fixo" }),
     staleTime: 1000 * 60 * 60,
@@ -140,23 +140,28 @@ function Home() {
           </Card>
         </div>
 
-        {/* DESEMPENHO DO GERADOR */}
-        {desempenho && (
-          <Card className="border-none shadow-md bg-gradient-to-br from-slate-50 to-white">
-            <CardHeader className="flex items-center gap-2">
-              <Target className="h-4 w-4 text-primary" />
-              <CardTitle className="text-sm uppercase font-bold">Desempenho do Gerador em 2026</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
-              {[11, 12, 13, 14, 15].map((n) => (
-                <div key={n} className="space-y-1">
-                  <p className="text-2xl font-black text-primary">{desempenho[`acertos_${n}`] ?? 0}</p>
-                  <p className="text-[10px] uppercase text-muted-foreground">{n} pontos</p>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        )}
+        {/* BLOCO DESEMPENHO DO GERADOR COM SKELETON */}
+        <Card className="border-none shadow-md bg-gradient-to-br from-slate-50 to-white">
+          <CardHeader className="flex items-center gap-2">
+            <Target className="h-4 w-4 text-primary" />
+            <CardTitle className="text-sm uppercase font-bold">Desempenho do Gerador em 2026</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
+            {isDesempenhoLoading
+              ? [11, 12, 13, 14, 15].map((n) => (
+                  <div key={n} className="space-y-1 animate-pulse">
+                    <div className="h-6 w-10 bg-slate-300 rounded mx-auto"></div>
+                    <p className="text-[10px] uppercase text-muted-foreground">{n} pontos</p>
+                  </div>
+                ))
+              : [11, 12, 13, 14, 15].map((n) => (
+                  <div key={n} className="space-y-1">
+                    <p className="text-2xl font-black text-primary">{desempenho?.[`acertos_${n}`] ?? 0}</p>
+                    <p className="text-[10px] uppercase text-muted-foreground">{n} pontos</p>
+                  </div>
+                ))}
+          </CardContent>
+        </Card>
 
         {/* MUNICÍPIOS */}
         {municipios.length > 0 && (
