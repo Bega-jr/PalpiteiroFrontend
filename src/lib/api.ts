@@ -28,11 +28,18 @@ export const getUltimoConcurso = async () => {
 };
 
 /* =====================
-   DESEMPENHO DO GERADOR (2026)
+   DESEMPENHO DO GERADOR
+   (fixo + estatístico juntos)
 ===================== */
-export const getDesempenhoGerador = async (params?: { ano?: number; tipo?: string }) => {
+export const getDesempenhoGerador = async (params?: { ano?: number }) => {
   const resp = await api.get("/home/desempenho", { params });
-  return resp.data?.dados || null;
+
+  // 🔴 antes: resp.data?.dados (inexistente)
+  // ✅ agora: payload real do backend
+  return resp.data || {
+    resumo: { "11": 0, "12": 0, "13": 0, "14": 0, "15": 0 },
+    total_concursos: 0,
+  };
 };
 
 /* =====================
