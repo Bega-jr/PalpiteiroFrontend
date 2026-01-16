@@ -156,7 +156,7 @@ function Home() {
                 ))
               : [11, 12, 13, 14, 15].map((n) => (
                   <div key={n} className="space-y-1">
-                    <p className="text-2xl font-black text-primary">{desempenho?.[`acertos_${n}`] ?? 0}</p>
+                    <p className="text-2xl font-black text-primary">{desempenho?.resumo?.[String(n)] ?? 0}</p>
                     <p className="text-[10px] uppercase text-muted-foreground">{n} pontos</p>
                   </div>
                 ))}
