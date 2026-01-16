@@ -30,6 +30,7 @@ export const getUltimoConcurso = async () => {
 /* =====================
    DESEMPENHO DO GERADOR
    (FIXO + ESTATÍSTICO UNIFICADOS)
+   FORMATO COMPATÍVEL COM HOME
 ===================== */
 export const getDesempenhoGerador = async (ano = 2026) => {
   const [fixoResp, estatResp] = await Promise.all([
@@ -37,25 +38,17 @@ export const getDesempenhoGerador = async (ano = 2026) => {
     api.get("/home/desempenho", { params: { ano, tipo: "estatistico" } }),
   ]);
 
-  const fixo = fixoResp.data || {};
-  const estat = estatResp.data || {};
-
-  const r1 = fixo.resumo || {};
-  const r2 = estat.resumo || {};
+  const r1 = fixoResp.data?.resumo || {};
+  const r2 = estatResp.data?.resumo || {};
 
   return {
     ano,
-
-    total_concursos:
-      (fixo.total_concursos || 0) +
-      (estat.total_concursos || 0),
-
     resumo: {
-      acertos_11: (r1.acertos_11 || 0) + (r2.acertos_11 || 0),
-      acertos_12: (r1.acertos_12 || 0) + (r2.acertos_12 || 0),
-      acertos_13: (r1.acertos_13 || 0) + (r2.acertos_13 || 0),
-      acertos_14: (r1.acertos_14 || 0) + (r2.acertos_14 || 0),
-      acertos_15: (r1.acertos_15 || 0) + (r2.acertos_15 || 0),
+      "11": (r1["11"] || r1.acertos_11 || 0) + (r2["11"] || r2.acertos_11 || 0),
+      "12": (r1["12"] || r1.acertos_12 || 0) + (r2["12"] || r2.acertos_12 || 0),
+      "13": (r1["13"] || r1.acertos_13 || 0) + (r2["13"] || r2.acertos_13 || 0),
+      "14": (r1["14"] || r1.acertos_14 || 0) + (r2["14"] || r2.acertos_14 || 0),
+      "15": (r1["15"] || r1.acertos_15 || 0) + (r2["15"] || r2.acertos_15 || 0),
     },
   };
 };
@@ -73,7 +66,5 @@ export const getPalpitesEstatisticos = async () => {
   return resp.data;
 };
 
-/* =====================
-   EXPORT DEFAULT
-===================== */
 export default api;
+
