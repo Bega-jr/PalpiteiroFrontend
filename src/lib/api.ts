@@ -24,21 +24,40 @@ export const api = axios.create({
 ===================== */
 export const getUltimoConcurso = async () => {
   const resp = await api.get("/home");
-  return resp.data?.data || null;
+  return resp.data?.data ?? null;
 };
 
 /* =====================
    DESEMPENHO DO GERADOR
+   (FIXO + ESTATÍSTICO UNIFICADOS)
 ===================== */
-export const getDesempenhoGerador = async (params?: { ano?: number; tipo?: string }) => {
-  const resp = await api.get("/home/desempenho", {
-    params: {
-      ano: params?.ano ?? 2026,
-      tipo: params?.tipo,
-    },
-  });
+export const getDesempenhoGerador = async (ano = 2026) => {
+  const [fixoResp, estatResp] = await Promise.all([
+    api.get("/home/desempenho", { params: { ano, tipo: "fixo" } }),
+    api.get("/home/desempenho", { params: { ano, tipo: "estatistico" } }),
+  ]);
 
-  return resp.data || null;
+  const fixo = fixoResp.data || {};
+  const estat = estatResp.data || {};
+
+  const r1 = fixo.resumo || {};
+  const r2 = estat.resumo || {};
+
+  return {
+    ano,
+
+    total_concursos:
+      (fixo.total_concursos || 0) +
+      (estat.total_concursos || 0),
+
+    resumo: {
+      acertos_11: (r1.acertos_11 || 0) + (r2.acertos_11 || 0),
+      acertos_12: (r1.acertos_12 || 0) + (r2.acertos_12 || 0),
+      acertos_13: (r1.acertos_13 || 0) + (r2.acertos_13 || 0),
+      acertos_14: (r1.acertos_14 || 0) + (r2.acertos_14 || 0),
+      acertos_15: (r1.acertos_15 || 0) + (r2.acertos_15 || 0),
+    },
+  };
 };
 
 /* =====================
@@ -54,4 +73,7 @@ export const getPalpitesEstatisticos = async () => {
   return resp.data;
 };
 
+/* =====================
+   EXPORT DEFAULT
+===================== */
 export default api;
