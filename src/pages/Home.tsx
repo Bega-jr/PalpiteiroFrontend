@@ -20,24 +20,24 @@ import {
 function Home() {
   const queryClient = useQueryClient();
 
-  // Último concurso
+  /* =====================
+     ÚLTIMO CONCURSO
+  ===================== */
   const { data: rawData, isLoading, isFetching, isError } = useQuery({
     queryKey: ["home"],
     queryFn: getUltimoConcurso,
     staleTime: 1000 * 60 * 30,
   });
 
-  // Desempenho FIXO
-  const { data: desempenhoFixo, isLoading: loadingFixo } = useQuery({
-    queryKey: ["home-desempenho", "fixo"],
-    queryFn: () => getDesempenhoGerador({ ano: 2026, tipo: "fixo" }),
-    staleTime: 1000 * 60 * 60,
-  });
-
-  // Desempenho ESTATÍSTICO
-  const { data: desempenhoEst, isLoading: loadingEst } = useQuery({
-    queryKey: ["home-desempenho", "estatistico"],
-    queryFn: () => getDesempenhoGerador({ ano: 2026, tipo: "estatistico" }),
+  /* =====================
+     DESEMPENHO (CONSOLIDADO)
+  ===================== */
+  const {
+    data: desempenho,
+    isLoading: isDesempenhoLoading,
+  } = useQuery({
+    queryKey: ["home-desempenho", 2026],
+    queryFn: () => getDesempenhoGerador({ ano: 2026 }),
     staleTime: 1000 * 60 * 60,
   });
 
@@ -81,17 +81,10 @@ function Home() {
   }
 
   const dezenas = Array.isArray(c.dezenas) ? c.dezenas.map(Number) : [];
-  const municipios = typeof c.municipios === "string" ? JSON.parse(c.municipios) : c.municipios || [];
-
-  // 🔹 Consolidação FIXO + ESTATÍSTICO (sem distinção visual)
-  const desempenhoTotal: Record<string, number> = {};
-  [11, 12, 13, 14, 15].forEach((n) => {
-    const v1 = desempenhoFixo?.resumo?.[String(n)] ?? 0;
-    const v2 = desempenhoEst?.resumo?.[String(n)] ?? 0;
-    desempenhoTotal[String(n)] = v1 + v2;
-  });
-
-  const isDesempenhoLoading = loadingFixo || loadingEst;
+  const municipios =
+    typeof c.municipios === "string"
+      ? JSON.parse(c.municipios)
+      : c.municipios || [];
 
   return (
     <Layout>
@@ -117,8 +110,16 @@ function Home() {
       <section className="py-12 container space-y-8">
         <div className="flex items-center justify-between">
           <h2 className="font-display text-2xl font-bold">Último Sorteio</h2>
-          <Button onClick={forceRefresh} variant="outline" size="sm" disabled={isFetching} className="gap-2">
-            <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+          <Button
+            onClick={forceRefresh}
+            variant="outline"
+            size="sm"
+            disabled={isFetching}
+            className="gap-2"
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
+            />
             Atualizar
           </Button>
         </div>
@@ -134,8 +135,12 @@ function Home() {
               </h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-3xl font-bold">{c.pares}P / {c.impares}Í</p>
-                  <p className="text-[10px] text-slate-500 uppercase">Paridade</p>
+                  <p className="text-3xl font-bold">
+                    {c.pares}P / {c.impares}Í
+                  </p>
+                  <p className="text-[10px] text-slate-500 uppercase">
+                    Paridade
+                  </p>
                 </div>
                 <div>
                   <p className="text-3xl font-bold">{c.soma}</p>
@@ -147,33 +152,48 @@ function Home() {
 
           <Card className="bg-primary text-primary-foreground border-none">
             <CardContent className="p-6">
-              <h3 className="text-[10px] uppercase mb-2 font-bold">Estimativa de Prêmio</h3>
+              <h3 className="text-[10px] uppercase mb-2 font-bold">
+                Estimativa de Prêmio
+              </h3>
               <div className="flex justify-between items-end">
-                <p className="text-3xl font-black">{formatarMoeda(c.estimativa_proximo)}</p>
-                {c.acumulado && <Badge className="bg-white/20">ACUMULOU</Badge>}
+                <p className="text-3xl font-black">
+                  {formatarMoeda(c.estimativa_proximo)}
+                </p>
+                {c.acumulado && (
+                  <Badge className="bg-white/20">ACUMULOU</Badge>
+                )}
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* DESEMPENHO CONSOLIDADO */}
+        {/* DESEMPENHO DO GERADOR */}
         <Card className="border-none shadow-md bg-gradient-to-br from-slate-50 to-white">
           <CardHeader className="flex items-center gap-2">
             <Target className="h-4 w-4 text-primary" />
-            <CardTitle className="text-sm uppercase font-bold">Desempenho do Gerador • 2026</CardTitle>
+            <CardTitle className="text-sm uppercase font-bold">
+              Desempenho do Gerador • 2026
+            </CardTitle>
           </CardHeader>
+
           <CardContent className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
             {isDesempenhoLoading
               ? [11, 12, 13, 14, 15].map((n) => (
                   <div key={n} className="space-y-1 animate-pulse">
-                    <div className="h-6 w-10 bg-slate-300 rounded mx-auto"></div>
-                    <p className="text-[10px] uppercase text-muted-foreground">{n} pontos</p>
+                    <div className="h-6 w-10 bg-slate-300 rounded mx-auto" />
+                    <p className="text-[10px] uppercase text-muted-foreground">
+                      {n} pontos
+                    </p>
                   </div>
                 ))
               : [11, 12, 13, 14, 15].map((n) => (
                   <div key={n} className="space-y-1">
-                    <p className="text-2xl font-black text-primary">{desempenhoTotal[String(n)]}</p>
-                    <p className="text-[10px] uppercase text-muted-foreground">{n} pontos</p>
+                    <p className="text-2xl font-black text-primary">
+                      {desempenho?.resumo?.[String(n)] ?? 0}
+                    </p>
+                    <p className="text-[10px] uppercase text-muted-foreground">
+                      {n} pontos
+                    </p>
                   </div>
                 ))}
           </CardContent>
@@ -184,11 +204,16 @@ function Home() {
           <Card className="border-none bg-white">
             <CardHeader className="flex items-center gap-2">
               <MapPin className="h-4 w-4 text-red-600" />
-              <CardTitle className="text-xs uppercase">Ganhadores 15 pontos</CardTitle>
+              <CardTitle className="text-xs uppercase">
+                Ganhadores 15 pontos
+              </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-3">
               {municipios.map((m: any, i: number) => (
-                <div key={i} className="flex gap-3 bg-slate-50 border rounded-xl px-4 py-3 text-sm">
+                <div
+                  key={i}
+                  className="flex gap-3 bg-slate-50 border rounded-xl px-4 py-3 text-sm"
+                >
                   <span className="font-black text-red-600">{m.uf}</span>
                   <span className="font-bold">{m.municipio}</span>
                   <Badge>{m.ganhadores}</Badge>
@@ -197,25 +222,6 @@ function Home() {
             </CardContent>
           </Card>
         )}
-
-        {/* RATEIO */}
-        <Card className="border-none bg-white">
-          <div className="bg-slate-50 px-6 py-4 border-b flex gap-2">
-            <Trophy className="h-4 w-4 text-yellow-500" />
-            <h3 className="font-bold text-sm uppercase">Rateio</h3>
-          </div>
-          <CardContent className="p-0">
-            {[15, 14, 13, 12, 11].map((n) => (
-              <div key={n} className="flex justify-between px-6 py-4 border-b">
-                <span className="font-semibold">{n} acertos</span>
-                <div className="text-right">
-                  <p className="font-bold">{Number(c[`ganhadores_${n}`]).toLocaleString("pt-BR")}</p>
-                  <p className="text-xs">{formatarMoeda(c[`valor_${n}`])}</p>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
 
         <div className="text-center text-[10px] text-muted-foreground flex gap-2 justify-center pb-10">
           <Info className="h-3 w-3" />
