@@ -38,25 +38,19 @@ export default function Home() {
   });
 
   /* =====================
-     DESEMPENHO FIXO
+     DESEMPENHO CONSOLIDADO (BACKEND)
   ===================== */
-  const { data: desempenhoFixo, isLoading: loadingFixo } = useQuery({
-    queryKey: ["desempenho", "fixo"],
-    queryFn: () => getDesempenhoGerador({ ano: 2026, tipo: "fixo" }),
+  const {
+    data: desempenho,
+    isLoading: loadingDesempenho,
+  } = useQuery({
+    queryKey: ["desempenho", 2026],
+    queryFn: () => getDesempenhoGerador({ ano: 2026 }),
     staleTime: 1000 * 60 * 60,
   });
 
   /* =====================
-     DESEMPENHO ESTATÍSTICO
-  ===================== */
-  const { data: desempenhoEst, isLoading: loadingEst } = useQuery({
-    queryKey: ["desempenho", "estatistico"],
-    queryFn: () => getDesempenhoGerador({ ano: 2026, tipo: "estatistico" }),
-    staleTime: 1000 * 60 * 60,
-  });
-
-  /* =====================
-     NORMALIZAÇÃO SEGURA
+     NORMALIZAÇÃO
   ===================== */
   const c =
     rawData && typeof rawData === "object" && "concurso" in rawData
@@ -114,18 +108,6 @@ export default function Home() {
     typeof c.municipios === "string"
       ? JSON.parse(c.municipios)
       : c.municipios || [];
-
-  /* =====================
-     DESEMPENHO CONSOLIDADO
-  ===================== */
-  const desempenhoTotal: Record<string, number> = {};
-  [11, 12, 13, 14, 15].forEach((n) => {
-    const v1 = desempenhoFixo?.resumo?.[String(n)] ?? 0;
-    const v2 = desempenhoEst?.resumo?.[String(n)] ?? 0;
-    desempenhoTotal[String(n)] = v1 + v2;
-  });
-
-  const isDesempenhoLoading = loadingFixo || loadingEst;
 
   /* =====================
      RENDER
@@ -235,7 +217,7 @@ export default function Home() {
             </CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
-            {isDesempenhoLoading
+            {loadingDesempenho
               ? [11, 12, 13, 14, 15].map((n) => (
                   <div key={n} className="space-y-1 animate-pulse">
                     <div className="h-6 w-10 bg-slate-300 rounded mx-auto" />
@@ -247,7 +229,7 @@ export default function Home() {
               : [11, 12, 13, 14, 15].map((n) => (
                   <div key={n} className="space-y-1">
                     <p className="text-2xl font-black text-primary">
-                      {desempenhoTotal[String(n)]}
+                      {desempenho?.resumo?.[String(n)] ?? 0}
                     </p>
                     <p className="text-[10px] uppercase text-muted-foreground">
                       {n} pontos
