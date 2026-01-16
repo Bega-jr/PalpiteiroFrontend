@@ -38,7 +38,7 @@ export default function Home() {
   });
 
   /* =====================
-     DESEMPENHO CONSOLIDADO (BACKEND)
+     DESEMPENHO (BACKEND CONSOLIDADO)
   ===================== */
   const {
     data: desempenho,
@@ -50,7 +50,7 @@ export default function Home() {
   });
 
   /* =====================
-     NORMALIZAÇÃO
+     NORMALIZAÇÃO HOME
   ===================== */
   const c =
     rawData && typeof rawData === "object" && "concurso" in rawData
@@ -109,6 +109,14 @@ export default function Home() {
       ? JSON.parse(c.municipios)
       : c.municipios || [];
 
+  const resumoDesempenho = desempenho?.resumo || {
+    "11": 0,
+    "12": 0,
+    "13": 0,
+    "14": 0,
+    "15": 0,
+  };
+
   /* =====================
      RENDER
   ===================== */
@@ -140,9 +148,7 @@ export default function Home() {
       <section className="py-12 container space-y-8">
         {/* HEADER */}
         <div className="flex items-center justify-between">
-          <h2 className="font-display text-2xl font-bold">
-            Último Sorteio
-          </h2>
+          <h2 className="font-display text-2xl font-bold">Último Sorteio</h2>
           <Button
             onClick={forceRefresh}
             variant="outline"
@@ -229,7 +235,7 @@ export default function Home() {
               : [11, 12, 13, 14, 15].map((n) => (
                   <div key={n} className="space-y-1">
                     <p className="text-2xl font-black text-primary">
-                      {desempenho?.resumo?.[String(n)] ?? 0}
+                      {resumoDesempenho[String(n)] ?? 0}
                     </p>
                     <p className="text-[10px] uppercase text-muted-foreground">
                       {n} pontos
@@ -297,4 +303,3 @@ export default function Home() {
     </Layout>
   );
 }
-
