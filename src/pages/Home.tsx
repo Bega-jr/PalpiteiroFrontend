@@ -20,30 +20,48 @@ import {
   Target,
 } from "lucide-react";
 
-function Home() {
+export default function Home() {
   const queryClient = useQueryClient();
 
-  const { data: rawData, isLoading, isFetching, isError } = useQuery({
+  /* =====================
+     ÚLTIMO CONCURSO
+  ===================== */
+  const {
+    data: rawData,
+    isLoading,
+    isFetching,
+    isError,
+  } = useQuery({
     queryKey: ["home"],
     queryFn: getUltimoConcurso,
     staleTime: 1000 * 60 * 30,
   });
 
+  /* =====================
+     DESEMPENHO FIXO
+  ===================== */
   const { data: desempenhoFixo, isLoading: loadingFixo } = useQuery({
     queryKey: ["desempenho", "fixo"],
     queryFn: () => getDesempenhoGerador({ ano: 2026, tipo: "fixo" }),
     staleTime: 1000 * 60 * 60,
   });
 
+  /* =====================
+     DESEMPENHO ESTATÍSTICO
+  ===================== */
   const { data: desempenhoEst, isLoading: loadingEst } = useQuery({
     queryKey: ["desempenho", "estatistico"],
     queryFn: () => getDesempenhoGerador({ ano: 2026, tipo: "estatistico" }),
     staleTime: 1000 * 60 * 60,
   });
 
-  const c = rawData && typeof rawData === "object" && "concurso" in rawData
-  ? rawData
-  : null;
+  /* =====================
+     NORMALIZAÇÃO SEGURA
+  ===================== */
+  const c =
+    rawData && typeof rawData === "object" && "concurso" in rawData
+      ? rawData
+      : null;
 
   const forceRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ["home"] });
@@ -56,6 +74,9 @@ function Home() {
       currency: "BRL",
     });
 
+  /* =====================
+     ESTADOS
+  ===================== */
   if (isLoading) {
     return (
       <Layout>
@@ -74,7 +95,9 @@ function Home() {
             Não foi possível carregar os dados do último concurso.
           </p>
           <Button onClick={forceRefresh} variant="outline" className="gap-2">
-            <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+            <RefreshCw
+              className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
+            />
             Tentar novamente
           </Button>
         </div>
@@ -82,12 +105,19 @@ function Home() {
     );
   }
 
+  /* =====================
+     DADOS DERIVADOS
+  ===================== */
   const dezenas = Array.isArray(c.dezenas) ? c.dezenas.map(Number) : [];
+
   const municipios =
     typeof c.municipios === "string"
       ? JSON.parse(c.municipios)
       : c.municipios || [];
 
+  /* =====================
+     DESEMPENHO CONSOLIDADO
+  ===================== */
   const desempenhoTotal: Record<string, number> = {};
   [11, 12, 13, 14, 15].forEach((n) => {
     const v1 = desempenhoFixo?.resumo?.[String(n)] ?? 0;
@@ -97,6 +127,9 @@ function Home() {
 
   const isDesempenhoLoading = loadingFixo || loadingEst;
 
+  /* =====================
+     RENDER
+  ===================== */
   return (
     <Layout>
       {/* HERO */}
@@ -106,12 +139,16 @@ function Home() {
             <Sparkles className="h-4 w-4 text-yellow-300" />
             Loterias em Tempo Real • 2026
           </div>
+
           <h1 className="font-display text-4xl md:text-6xl font-bold text-white">
-            Lotofácil <span className="underline decoration-primary">Oficial</span>
+            Lotofácil{" "}
+            <span className="underline decoration-primary">Oficial</span>
           </h1>
+
           <p className="text-lg text-white/80 max-w-2xl mx-auto">
             Concurso {c.concurso} ({c.data})
           </p>
+
           <Button asChild size="lg" className="bg-white text-primary font-bold">
             <Link to="/palpites">Gerar Palpites Estratégicos</Link>
           </Button>
@@ -119,8 +156,11 @@ function Home() {
       </section>
 
       <section className="py-12 container space-y-8">
+        {/* HEADER */}
         <div className="flex items-center justify-between">
-          <h2 className="font-display text-2xl font-bold">Último Sorteio</h2>
+          <h2 className="font-display text-2xl font-bold">
+            Último Sorteio
+          </h2>
           <Button
             onClick={forceRefresh}
             variant="outline"
@@ -128,19 +168,27 @@ function Home() {
             disabled={isFetching}
             className="gap-2"
           >
-            <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+            <RefreshCw
+              className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
+            />
             Atualizar
           </Button>
         </div>
 
-        <ConcursoCard concurso={c.concurso} data={c.data} dezenas={dezenas} />
+        {/* CONCURSO */}
+        <ConcursoCard
+          concurso={c.concurso}
+          data={c.data}
+          dezenas={dezenas}
+        />
 
         {/* ESTATÍSTICAS */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card className="bg-slate-950 text-white border-none">
             <CardContent className="p-6">
               <h3 className="text-[10px] uppercase text-slate-500 mb-4 flex gap-2 font-bold">
-                <BarChart3 className="h-3 w-3" /> Estatísticas
+                <BarChart3 className="h-3 w-3" />
+                Estatísticas
               </h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -153,7 +201,9 @@ function Home() {
                 </div>
                 <div>
                   <p className="text-3xl font-bold">{c.soma}</p>
-                  <p className="text-[10px] text-slate-500 uppercase">Soma</p>
+                  <p className="text-[10px] text-slate-500 uppercase">
+                    Soma
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -168,7 +218,9 @@ function Home() {
                 <p className="text-3xl font-black">
                   {formatarMoeda(c.estimativa_proximo)}
                 </p>
-                {c.acumulado && <Badge className="bg-white/20">ACUMULOU</Badge>}
+                {c.acumulado && (
+                  <Badge className="bg-white/20">ACUMULOU</Badge>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -237,7 +289,10 @@ function Home() {
           </div>
           <CardContent className="p-0">
             {[15, 14, 13, 12, 11].map((n) => (
-              <div key={n} className="flex justify-between px-6 py-4 border-b">
+              <div
+                key={n}
+                className="flex justify-between px-6 py-4 border-b"
+              >
                 <span className="font-semibold">{n} acertos</span>
                 <div className="text-right">
                   <p className="font-bold">
@@ -260,6 +315,4 @@ function Home() {
     </Layout>
   );
 }
-
-export default Home;
 
