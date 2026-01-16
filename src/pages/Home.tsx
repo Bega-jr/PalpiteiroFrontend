@@ -41,7 +41,9 @@ function Home() {
     staleTime: 1000 * 60 * 60,
   });
 
-  const c = Array.isArray(rawData) ? rawData[0] : rawData;
+  const c = rawData && typeof rawData === "object" && "concurso" in rawData
+  ? rawData
+  : null;
 
   const forceRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ["home"] });
