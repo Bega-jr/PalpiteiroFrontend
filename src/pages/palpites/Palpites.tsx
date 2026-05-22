@@ -11,6 +11,8 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { PalpiteEstatistico } from "@/types/palpites";
+import { useAuth } from "@/hooks/useAuth";
+
 import {
   Tooltip,
   TooltipContent,
@@ -31,6 +33,9 @@ interface RespostaPalpitesUnificada {
 export default function Palpites() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // 🔐 RESGATA O USUÁRIO LOGADO DIRETAMENTE DO SEU ECOSSISTEMA
+  const { user } = useAuth(); 
 
   // 📡 REQUISIÇÃO CENTRALIZADA: Consome a rota única unificada do seu service Python
   const {
@@ -93,7 +98,7 @@ export default function Palpites() {
 
       <div className="container py-8 md:py-12 space-y-10">
 
-                {/* 🧠 PAINEL CONTEXTUAL DO MOTOR DE IA (v19.0) */}
+               {/* 🧠 PAINEL CONTEXTUAL DO MOTOR DE IA (v19.0) */}
         <TooltipProvider delayDuration={200}>
           <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
             
@@ -179,6 +184,13 @@ export default function Palpites() {
           </section>
         </TooltipProvider>
 
+        {/* 🔐 INDICADOR DE CONTA CONECTADA (useAuth) */}
+        {user?.email && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/40 px-3 py-2 rounded-xl border border-dashed w-fit animate-fade-in">
+            <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Palpites salvos serão associados à conta: <strong className="text-foreground font-mono text-primary/90">{user.email}</strong></span>
+          </div>
+        )}
 
         {/* PALPITE FIXO (OURO DO DIA - ÍNDICE 1) */}
         <section>
@@ -236,7 +248,7 @@ export default function Palpites() {
           )}
         </section>
 
-                {/* PALPITES ESTATÍSTICOS (RESTANTE DA LISTA: ÍNDICES DE 2 A 7) */}
+        {/* PALPITES ESTATÍSTICOS (RESTANTE DA LISTA: ÍNDICES DE 2 A 7) */}
         <section>
           <div className="flex items-center gap-2 mb-6">
             <h2 className="font-display text-2xl font-bold">Sugestões do Sistema</h2>
