@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Layout } from "@/components/Layout";
-import { ConcursoCard } from "@/components/ConcursoCard";
-import { LoadingList } from "@/components/LoadingStates";
+import { Layout } from "@/components/layout/Layout";
+import { ConcursoCard } from "@/components/resultados/ConcursoCard";
+import { LoadingList } from "@/components/feedback/LoadingStates";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

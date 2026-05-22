@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
-import { Layout } from "@/components/Layout";
-import { PalpiteCard } from "@/components/PalpiteCard";
+import { Layout } from "@/components/layout/Layout";
+import { PalpiteCard } from "@/components/palpites/PalpiteCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,7 +17,7 @@ interface Palpite {
   created_at: string;
   numeros: number[];
   score_medio: number;
-  metricas: any;
+  metricas: Record<string, unknown>;
   acertos: number;
 }
 

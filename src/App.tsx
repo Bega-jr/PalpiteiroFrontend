@@ -4,22 +4,23 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-import Home from "./pages/Home";
-import Palpites from "./pages/Palpites";
-import Estatisticas from "./pages/Estatisticas";
-import Resultados from "./pages/Resultados";
-import Historico from "./pages/Historico";
-import Auth from "./pages/Auth";
-import NotFound from "./pages/NotFound";
-import DebugApiPage from "./pages/DebugApiPage"; // Importe o componente de debug
+import Home from "./pages/home/Home";
+import Palpites from "./pages/palpites/Palpites";
+import Estatisticas from "./pages/estatisticas/Estatisticas";
+import Resultados from "./pages/resultados/Resultados";
+import Historico from "./pages/historico/Historico";
+import Auth from "./pages/auth/Auth";
+import NotFound from "./pages/errors/NotFound";
 
-import { ProtectedRoute } from "@/components/ProtectedRoute";
+import EstatisticaDebug from "./pages/dev/EstatisticaDebug";
+
+import { ProtectedRoute } from "@/components/routes/ProtectedRoute";
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 2,
-      staleTime: 1000 * 60 * 5, // 5 minutos
+      staleTime: 1000 * 60 * 5,
     },
   },
 });
@@ -29,17 +30,17 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+
       <BrowserRouter>
         <Routes>
-          {/* Páginas públicas */}
+
+          {/* Públicas */}
           <Route path="/" element={<Home />} />
           <Route path="/auth" element={<Auth />} />
-          <Route path="/debug-api" element={<DebugApiPage />} />
-          {/* Rota de Resultados agora é pública para teste */}
+          <Route path="/debug-api" element={<EstatisticaDebug />} />
           <Route path="/resultados" element={<Resultados />} />
 
-
-          {/* Páginas privadas (requerem login) */}
+          {/* Privadas */}
           <Route
             path="/palpites"
             element={
@@ -48,6 +49,7 @@ const App = () => (
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/estatisticas"
             element={
@@ -56,15 +58,7 @@ const App = () => (
               </ProtectedRoute>
             }
           />
-          {/* A rota de resultados foi movida para cima, esta é ignorada */}
-          {/* <Route
-            path="/resultados"
-            element={
-              <ProtectedRoute>
-                <Resultados />
-              </ProtectedRoute>
-            }
-          /> */}
+
           <Route
             path="/historico"
             element={
@@ -74,8 +68,9 @@ const App = () => (
             }
           />
 
-          {/* Página 404 */}
+          {/* 404 */}
           <Route path="*" element={<NotFound />} />
+
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
@@ -83,4 +78,3 @@ const App = () => (
 );
 
 export default App;
-

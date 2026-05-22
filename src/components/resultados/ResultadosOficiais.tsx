@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Search, Trophy } from "lucide-react";
-import { LotteryBall } from "@/components/LotteryBall"; // Importei o componente que você me passou
+import { LotteryBall } from "@/components/palpites/LotteryBall"; // Importei o componente que você me passou
 
 interface Concurso {
   numero: number;

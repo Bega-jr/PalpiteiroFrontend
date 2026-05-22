@@ -29,7 +29,7 @@ const DebugApiPage = () => {
         const response = await api.get<ConcursoTesteDebug[]>('/ultimos/10');
         setDataAxios(response.data); // Axios coloca a resposta em .data
         setErrorAxios(null);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Erro Axios:", err.response || err.message);
         setErrorAxios(err.message);
         setDataAxios("FALHA NO AXIOS! Verifique o console para mais detalhes.");
@@ -52,7 +52,7 @@ const DebugApiPage = () => {
         const data = await response.json();
         setDataFetch(data); 
         setErrorFetch(null);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Erro Fetch:", err.message);
         setErrorFetch(err.message);
         setDataFetch("FALHA NO FETCH! Verifique o console para mais detalhes.");

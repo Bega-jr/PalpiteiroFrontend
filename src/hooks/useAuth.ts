@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import { User } from "@supabase/supabase-js";
 
 interface AuthState {
-  user: any | null;
+  user: User | null;
   loading: boolean;
 }
 

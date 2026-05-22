@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Layout } from "@/components/Layout";
-import { PalpiteCard } from "@/components/PalpiteCard";
-import { LoadingCard } from "@/components/LoadingStates";
+import { Layout } from "@/components/layout/Layout";
+import { PalpiteCard } from "@/components/palpites/PalpiteCard";
+import { LoadingCard } from "@/components/feedback/LoadingStates";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,7 @@ import { RefreshCw, BarChart3, Calculator, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import type { PalpiteEstatistico } from "@/types/palpites";
 
 export default function Palpites() {
   const { toast } = useToast();
@@ -47,7 +48,7 @@ export default function Palpites() {
   };
 
   // Função para garantir que os números sejam um array (trata JSONB do Supabase)
-  const parseNumbers = (val: any): number[] => {
+  const parseNumbers = (val: unknown): number[] => {
     if (Array.isArray(val)) return val;
     try {
       return typeof val === "string" ? JSON.parse(val) : [];
@@ -152,7 +153,13 @@ export default function Palpites() {
             </div>
           ) : palpitesEstatisticos?.palpites?.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {palpitesEstatisticos.palpites.map((p: any, index: number) => (
+              {palpitesEstatisticos.palpites.map((
+                p: {
+                  indice_palpite: number;
+                  numeros: string | number[];
+                },
+                index: number
+              ) => (
                 <div key={p.indice_palpite} className="space-y-2">
                   <PalpiteCard
                     index={p.indice_palpite}

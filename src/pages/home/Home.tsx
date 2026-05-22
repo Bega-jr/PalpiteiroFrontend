@@ -1,14 +1,23 @@
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { Layout } from "@/components/Layout";
-import { ConcursoCard } from "@/components/ConcursoCard";
-import { LoadingCard } from "@/components/LoadingStates";
+import { Layout } from "@/components/layout/Layout";
+import { ConcursoCard } from "@/components/resultados/ConcursoCard";
+import { LoadingCard } from "@/components/feedback/LoadingStates";
+
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-import { getUltimoConcurso, getDesempenhoGerador } from "@/lib/api";
+import {
+  getUltimoConcurso,
+  getDesempenhoGerador,
+} from "@/lib/api";
 
 import {
   Sparkles,
@@ -19,6 +28,43 @@ import {
   MapPin,
   Target,
 } from "lucide-react";
+
+interface Municipio {
+  municipio: string;
+  uf: string;
+  ganhadores: number;
+  valor?: number;
+}
+
+interface ConcursoData {
+  concurso: number;
+  data: string;
+  dezenas: number[] | string[];
+  pares: number;
+  impares: number;
+  soma: number;
+  estimativa_proximo: number | string;
+  acumulado: boolean;
+  arrecadacao: number | string;
+
+  municipios?: Municipio[] | string;
+
+  ganhadores_11: number;
+  ganhadores_12: number;
+  ganhadores_13: number;
+  ganhadores_14: number;
+  ganhadores_15: number;
+
+  valor_11: number | string;
+  valor_12: number | string;
+  valor_13: number | string;
+  valor_14: number | string;
+  valor_15: number | string;
+}
+
+interface DesempenhoResponse {
+  resumo?: Record<string, number>;
+}
 
 export default function Home() {
   const queryClient = useQueryClient();
@@ -38,23 +84,25 @@ export default function Home() {
   });
 
   /* =====================
-     DESEMPENHO (BACKEND CONSOLIDADO)
+     DESEMPENHO
   ===================== */
   const {
     data: desempenho,
     isLoading: loadingDesempenho,
-  } = useQuery({
+  } = useQuery<DesempenhoResponse>({
     queryKey: ["desempenho", 2026],
     queryFn: () => getDesempenhoGerador({ ano: 2026 }),
     staleTime: 1000 * 60 * 60,
   });
 
   /* =====================
-     NORMALIZAÇÃO HOME
+     NORMALIZAÇÃO
   ===================== */
-  const c =
-    rawData && typeof rawData === "object" && "concurso" in rawData
-      ? rawData
+  const c: ConcursoData | null =
+    rawData &&
+    typeof rawData === "object" &&
+    "concurso" in rawData
+      ? (rawData as ConcursoData)
       : null;
 
   const forceRefresh = () => {
@@ -62,7 +110,9 @@ export default function Home() {
     queryClient.invalidateQueries({ queryKey: ["desempenho"] });
   };
 
-  const formatarMoeda = (valor: any) =>
+  const formatarMoeda = (
+    valor: number | string | undefined
+  ) =>
     Number(valor || 0).toLocaleString("pt-BR", {
       style: "currency",
       currency: "BRL",
@@ -88,9 +138,16 @@ export default function Home() {
           <p className="text-muted-foreground font-medium">
             Não foi possível carregar os dados do último concurso.
           </p>
-          <Button onClick={forceRefresh} variant="outline" className="gap-2">
+
+          <Button
+            onClick={forceRefresh}
+            variant="outline"
+            className="gap-2"
+          >
             <RefreshCw
-              className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
+              className={`h-4 w-4 ${
+                isFetching ? "animate-spin" : ""
+              }`}
             />
             Tentar novamente
           </Button>
@@ -102,9 +159,11 @@ export default function Home() {
   /* =====================
      DADOS DERIVADOS
   ===================== */
-  const dezenas = Array.isArray(c.dezenas) ? c.dezenas.map(Number) : [];
+  const dezenas = Array.isArray(c.dezenas)
+    ? c.dezenas.map(Number)
+    : [];
 
-  const municipios =
+  const municipios: Municipio[] =
     typeof c.municipios === "string"
       ? JSON.parse(c.municipios)
       : c.municipios || [];
@@ -132,15 +191,23 @@ export default function Home() {
 
           <h1 className="font-display text-4xl md:text-6xl font-bold text-white">
             Lotofácil{" "}
-            <span className="underline decoration-primary">Oficial</span>
+            <span className="underline decoration-primary">
+              Oficial
+            </span>
           </h1>
 
           <p className="text-lg text-white/80 max-w-2xl mx-auto">
             Concurso {c.concurso} ({c.data})
           </p>
 
-          <Button asChild size="lg" className="bg-white text-primary font-bold">
-            <Link to="/palpites">Gerar Palpites Estratégicos</Link>
+          <Button
+            asChild
+            size="lg"
+            className="bg-white text-primary font-bold"
+          >
+            <Link to="/palpites">
+              Gerar Palpites Estratégicos
+            </Link>
           </Button>
         </div>
       </section>
@@ -148,7 +215,10 @@ export default function Home() {
       <section className="py-12 container space-y-8">
         {/* HEADER */}
         <div className="flex items-center justify-between">
-          <h2 className="font-display text-2xl font-bold">Último Sorteio</h2>
+          <h2 className="font-display text-2xl font-bold">
+            Último Sorteio
+          </h2>
+
           <Button
             onClick={forceRefresh}
             variant="outline"
@@ -157,7 +227,9 @@ export default function Home() {
             className="gap-2"
           >
             <RefreshCw
-              className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
+              className={`h-4 w-4 ${
+                isFetching ? "animate-spin" : ""
+              }`}
             />
             Atualizar
           </Button>
@@ -178,17 +250,23 @@ export default function Home() {
                 <BarChart3 className="h-3 w-3" />
                 Estatísticas
               </h3>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-3xl font-bold">
                     {c.pares}P / {c.impares}Í
                   </p>
+
                   <p className="text-[10px] text-slate-500 uppercase">
                     Paridade
                   </p>
                 </div>
+
                 <div>
-                  <p className="text-3xl font-bold">{c.soma}</p>
+                  <p className="text-3xl font-bold">
+                    {c.soma}
+                  </p>
+
                   <p className="text-[10px] text-slate-500 uppercase">
                     Soma
                   </p>
@@ -202,12 +280,16 @@ export default function Home() {
               <h3 className="text-[10px] uppercase mb-2 font-bold">
                 Estimativa de Prêmio
               </h3>
+
               <div className="flex justify-between items-end">
                 <p className="text-3xl font-black">
                   {formatarMoeda(c.estimativa_proximo)}
                 </p>
+
                 {c.acumulado && (
-                  <Badge className="bg-white/20">ACUMULOU</Badge>
+                  <Badge className="bg-white/20">
+                    ACUMULOU
+                  </Badge>
                 )}
               </div>
             </CardContent>
@@ -218,15 +300,21 @@ export default function Home() {
         <Card className="border-none shadow-md bg-gradient-to-br from-slate-50 to-white">
           <CardHeader className="flex items-center gap-2">
             <Target className="h-4 w-4 text-primary" />
+
             <CardTitle className="text-sm uppercase font-bold">
               Desempenho do Gerador • 2026
             </CardTitle>
           </CardHeader>
+
           <CardContent className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
             {loadingDesempenho
               ? [11, 12, 13, 14, 15].map((n) => (
-                  <div key={n} className="space-y-1 animate-pulse">
+                  <div
+                    key={n}
+                    className="space-y-1 animate-pulse"
+                  >
                     <div className="h-6 w-10 bg-slate-300 rounded mx-auto" />
+
                     <p className="text-[10px] uppercase text-muted-foreground">
                       {n} pontos
                     </p>
@@ -237,6 +325,7 @@ export default function Home() {
                     <p className="text-2xl font-black text-primary">
                       {resumoDesempenho[String(n)] ?? 0}
                     </p>
+
                     <p className="text-[10px] uppercase text-muted-foreground">
                       {n} pontos
                     </p>
@@ -250,18 +339,26 @@ export default function Home() {
           <Card className="border-none bg-white">
             <CardHeader className="flex items-center gap-2">
               <MapPin className="h-4 w-4 text-red-600" />
+
               <CardTitle className="text-xs uppercase">
                 Ganhadores 15 pontos
               </CardTitle>
             </CardHeader>
+
             <CardContent className="flex flex-wrap gap-3">
-              {municipios.map((m: any, i: number) => (
+              {municipios.map((m, i) => (
                 <div
                   key={i}
                   className="flex gap-3 bg-slate-50 border rounded-xl px-4 py-3 text-sm"
                 >
-                  <span className="font-black text-red-600">{m.uf}</span>
-                  <span className="font-bold">{m.municipio}</span>
+                  <span className="font-black text-red-600">
+                    {m.uf}
+                  </span>
+
+                  <span className="font-bold">
+                    {m.municipio}
+                  </span>
+
                   <Badge>{m.ganhadores}</Badge>
                 </div>
               ))}
@@ -273,21 +370,35 @@ export default function Home() {
         <Card className="border-none bg-white">
           <div className="bg-slate-50 px-6 py-4 border-b flex gap-2">
             <Trophy className="h-4 w-4 text-yellow-500" />
-            <h3 className="font-bold text-sm uppercase">Rateio</h3>
+
+            <h3 className="font-bold text-sm uppercase">
+              Rateio
+            </h3>
           </div>
+
           <CardContent className="p-0">
             {[15, 14, 13, 12, 11].map((n) => (
               <div
                 key={n}
                 className="flex justify-between px-6 py-4 border-b"
               >
-                <span className="font-semibold">{n} acertos</span>
+                <span className="font-semibold">
+                  {n} acertos
+                </span>
+
                 <div className="text-right">
                   <p className="font-bold">
-                    {Number(c[`ganhadores_${n}`]).toLocaleString("pt-BR")}
+                    {Number(
+                      c[`ganhadores_${n}` as keyof ConcursoData]
+                    ).toLocaleString("pt-BR")}
                   </p>
+
                   <p className="text-xs">
-                    {formatarMoeda(c[`valor_${n}`])}
+                    {formatarMoeda(
+                      c[`valor_${n}` as keyof ConcursoData] as
+                        | number
+                        | string
+                    )}
                   </p>
                 </div>
               </div>
@@ -297,7 +408,9 @@ export default function Home() {
 
         <div className="text-center text-[10px] text-muted-foreground flex gap-2 justify-center pb-10">
           <Info className="h-3 w-3" />
-          Arrecadação: {formatarMoeda(c.arrecadacao)} • Concurso {c.concurso}
+
+          Arrecadação: {formatarMoeda(c.arrecadacao)} • Concurso{" "}
+          {c.concurso}
         </div>
       </section>
     </Layout>

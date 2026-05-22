@@ -1,9 +1,8 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-
-import { Layout } from "@/components/Layout";
-import { LotteryBall } from "@/components/LotteryBall";
-import { LoadingStats } from "@/components/LoadingStates";
+import { Layout } from "@/components/layout/Layout";
+import { LotteryBall } from "@/components/palpites/LotteryBall";
+import { LoadingStats } from "@/components/feedback/LoadingStates";
 
 import {
   Card,
@@ -338,7 +337,7 @@ function Resumo({
   icon,
 }: {
   label: string;
-  value: any;
+  value: number | string;
   icon?: React.ReactNode;
 }) {
   return (
