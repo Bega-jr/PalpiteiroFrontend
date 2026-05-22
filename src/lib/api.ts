@@ -54,17 +54,51 @@ export const getDesempenhoGerador = async (ano = 2026) => {
 };
 
 /* =====================
-   PALPITES
+   PALPITES CONCILIADOS (v18.1 Adaptive)
 ===================== */
+
+// Mantemos a assinatura para evitar quebras no compilador caso seja importada em outro arquivo
 export const getPalpiteFixo = async () => {
-  const resp = await api.get("/palpites/fixo");
-  return resp.data;
+  try {
+    const resp = await api.get("/palpites/fixo");
+    return resp.data;
+  } catch {
+    return null; // Retorna nulo silenciosamente em vez de estourar 404 na tela
+  }
 };
 
+/**
+ * ROTA CENTRAL DE CONCILIAÇÃO:
+ * Intercepta o payload da Vercel, normaliza os dados e injeta compatibilidade
+ * de nomes (ex: mapeia 'indice' para 'indice_palpite' e 'soma' para 'soma_total').
+ */
 export const getPalpitesEstatisticos = async () => {
   const resp = await api.get("/palpites/estatisticos");
-  return resp.data;
+  
+  // Captura a lista de palpites independente de como o backend envelopar (data.palpites, data.data ou array puro)
+  const listaBruta = resp.data?.palpites || resp.data?.data || (Array.isArray(resp.data) ? resp.data : []);
+
+  // Mapeamento indestrutível de colunas antigas vs novas
+  const palpitesNormalizados = listaBruta.map((p: any) => ({
+    id: p.id || undefined,
+    indice_palpite: p.indice || p.indice_palpite || 0,
+    numeros: p.numeros || [],
+    soma_total: p.soma || p.soma_total || 0,
+    pares: p.pares || 0,
+    impares: p.impares || 0,
+    score: typeof p.score === "number" ? p.score : 0,
+    versao_gerador: p.metodo || p.versao_gerador || p.versao_generator || '--'
+  }));
+
+  // Retorna o objeto envelopado com suporte nativo aos cards contextuais do front-end
+  return {
+    status: resp.data?.status || "ok",
+    data_referencia: resp.data?.data_referencia || null,
+    total: resp.data?.total || palpitesNormalizados.length,
+    tipo_regime: resp.data?.tipo_regime || "NEUTRO", 
+    dispersao: resp.data?.dispersao || 0,
+    palpites: palpitesNormalizados
+  };
 };
 
 export default api;
-
