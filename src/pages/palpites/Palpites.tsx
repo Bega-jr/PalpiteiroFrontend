@@ -11,6 +11,13 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { PalpiteEstatistico } from "@/types/palpites";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
 
 interface RespostaPalpitesUnificada {
   status: string;
@@ -86,73 +93,92 @@ export default function Palpites() {
 
       <div className="container py-8 md:py-12 space-y-10">
 
-        {/* 🧠 PAINEL CONTEXTUAL DO MOTOR DE IA (v19.0) */}
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="bg-primary/5 border-primary/10">
-            <CardContent className="p-4 flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Direcionamento do Motor</p>
-                <h3 className="text-base font-bold font-display tracking-tight">
-                  {tipoRegime === "CONTRACAO_FRIAS" 
-                    ? "🛡️ Regime de Contração" 
-                    : tipoRegime === "EXPANSAO_QUENTES" 
-                    ? "🔥 Regime de Expansão" 
-                    : "🔄 Regime Estável"}
-                </h3>
-              </div>
-              <Badge variant={tipoRegime === "CONTRACAO_FRIAS" ? "destructive" : "default"} className="font-mono text-[10px]">
-                {tipoRegime}
-              </Badge>
-            </CardContent>
-          </Card>
+                {/* 🧠 PAINEL CONTEXTUAL DO MOTOR DE IA (v19.0) */}
+        <TooltipProvider delayDuration={200}>
+          <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            
+            {/* CARD 1: DIRECIOMENTO DO MOTOR */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Card className="bg-primary/5 border-primary/10 cursor-help transition-colors hover:bg-primary/10">
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div className="space-y-1">
+                      <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Direcionamento do Motor</p>
+                      <h3 className="text-base font-bold font-display tracking-tight">
+                        {tipoRegime === "CONTRACAO_FRIAS" 
+                          ? "🛡️ Regime de Contração" 
+                          : tipoRegime === "EXPANSAO_QUENTES" 
+                          ? "🔥 Regime de Expansão" 
+                          : "🔄 Regime Estável"}
+                      </h3>
+                    </div>
+                    <Badge variant={tipoRegime === "CONTRACAO_FRIAS" ? "destructive" : "default"} className="font-mono text-[10px]">
+                      {tipoRegime}
+                    </Badge>
+                  </CardContent>
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs p-3 bg-popover text-popover-foreground border shadow-md rounded-xl">
+                <p className="text-xs font-bold text-primary mb-1">🧠 Como funciona o Regime?</p>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  Avalia a média móvel de acertos dos palpites. Se o mercado oscilar negativamente, ativa-se o modo <span className="font-bold text-destructive">Contração</span> para blindar os jogos. Métricas estáveis liberam o modo <span className="font-bold text-primary">Expansão</span>.
+                </p>
+              </TooltipContent>
+            </Tooltip>
 
-          <Card className="bg-primary/5 border-primary/10">
-            <CardContent className="p-4 flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Volatilidade (Spread)</p>
-                <h3 className="text-base font-bold font-display tracking-tight">
-                  {dispersao >= 4 ? "Alta Variabilidade" : "Dispersão Controlada"}
-                </h3>
-              </div>
-              <Badge variant="outline" className="font-mono text-[10px] flex items-center gap-1">
-                <ShieldAlert className="h-3 w-3 text-amber-500" />
-                Spread: {dispersao}
-              </Badge>
-            </CardContent>
-          </Card>
+            {/* CARD 2: VOLATILIDADE (SPREAD) */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Card className="bg-primary/5 border-primary/10 cursor-help transition-colors hover:bg-primary/10">
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div className="space-y-1">
+                      <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Volatilidade (Spread)</p>
+                      <h3 className="text-base font-bold font-display tracking-tight">
+                        {dispersao >= 4 ? "Alta Variabilidade" : "Dispersão Controlada"}
+                      </h3>
+                    </div>
+                    <Badge variant="outline" className="font-mono text-[10px] flex items-center gap-1">
+                      <ShieldAlert className="h-3 w-3 text-amber-500" />
+                      Spread: {dispersao}
+                    </Badge>
+                  </CardContent>
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs p-3 bg-popover text-popover-foreground border shadow-md rounded-xl">
+                <p className="text-xs font-bold text-primary mb-1">📊 O que significa o Spread?</p>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  Mede a distância matemática (amplitude) de acertos entre o melhor e o pior palpite do dia. Um <span className="font-bold text-amber-600">Spread &gt;= 4</span> indica alta oscilação no mercado, forçando o motor de IA a recalibrar os pesos estruturais.
+                </p>
+              </TooltipContent>
+            </Tooltip>
 
-          <Card className="bg-primary/5 border-primary/10">
-            <CardContent className="p-4 flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Core Algorítmico</p>
-                <h3 className="text-base font-bold font-display tracking-tight">Genetic Engine Ativo</h3>
-              </div>
-              <Badge variant="secondary" className="font-mono text-[10px] flex items-center gap-1">
-                <Cpu className="h-3 w-3" />
-                v19.0 Genetic
-              </Badge>
-            </CardContent>
-          </Card>
-        </section>
+            {/* CARD 3: CORE ALGORÍTMICO */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Card className="bg-primary/5 border-primary/10 cursor-help transition-colors hover:bg-primary/10">
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div className="space-y-1">
+                      <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Core Algorítmico</p>
+                      <h3 className="text-base font-bold font-display tracking-tight">Genetic Engine Ativo</h3>
+                    </div>
+                    <Badge variant="secondary" className="font-mono text-[10px] flex items-center gap-1">
+                      <Cpu className="h-3 w-3" />
+                      v19.0 Genetic
+                    </Badge>
+                  </CardContent>
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs p-3 bg-popover text-popover-foreground border shadow-md rounded-xl">
+                <p className="text-xs font-bold text-primary mb-1">🧬 Motor Genético Evolutivo</p>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  Combina cruzamentos matemáticos e mutações probabilísticas com base em mais de 3.600 concursos. Ele valida milhões de jogos por dia para extrair os 7 palpites com os melhores scores contextuais.
+                </p>
+              </TooltipContent>
+            </Tooltip>
 
-        {/* CONTROLE */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-muted/30 p-4 rounded-2xl border">
-          <div className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4 text-primary" />
-            <p className="text-sm text-muted-foreground">
-              Algoritmo genético evolutivo sincronizado com a infraestrutura cloud.
-            </p>
-          </div>
-          <Button
-            onClick={handleRefresh}
-            disabled={isFetching}
-            variant="outline"
-            className="w-full sm:w-auto bg-background"
-          >
-            <RefreshCw className={`mr-2 h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
-            Sincronizar Dados
-          </Button>
-        </div>
+          </section>
+        </TooltipProvider>
+
 
         {/* PALPITE FIXO (OURO DO DIA - ÍNDICE 1) */}
         <section>
