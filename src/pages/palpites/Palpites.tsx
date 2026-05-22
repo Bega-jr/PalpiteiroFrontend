@@ -184,11 +184,16 @@ export default function Palpites() {
           </section>
         </TooltipProvider>
 
-        {/* 🔐 INDICADOR DE CONTA CONECTADA (useAuth) */}
-        {user?.email && (
+         {/* 🔐 INDICADOR DE CONTA CONECTADA (useAuth v19.0) */}
+        {!authLoading && user?.email ? (
           <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/40 px-3 py-2 rounded-xl border border-dashed w-fit animate-fade-in">
             <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
             <span>Palpites salvos serão associados à conta: <strong className="text-foreground font-mono text-primary/90">{user.email}</strong></span>
+          </div>
+        ) : !authLoading && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground bg-amber-500/5 px-3 py-2 rounded-xl border border-amber-500/20 border-dashed w-fit animate-fade-in">
+            <div className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+            <span>Você está em modo visitante. <a href="/auth" className="underline font-bold text-primary">Faça login</a> para salvar seus palpites na nuvem.</span>
           </div>
         )}
 
@@ -243,69 +248,6 @@ export default function Palpites() {
             <Card className="border-dashed bg-muted/10">
               <CardContent className="p-12 text-center text-muted-foreground">
                 Nenhum palpite mestre gerado para o concurso vigente.
-              </CardContent>
-            </Card>
-          )}
-        </section>
-
-        {/* PALPITES ESTATÍSTICOS (RESTANTE DA LISTA: ÍNDICES DE 2 A 7) */}
-        <section>
-          <div className="flex items-center gap-2 mb-6">
-            <h2 className="font-display text-2xl font-bold">Sugestões do Sistema</h2>
-            <Badge variant="secondary" className="font-mono">
-              {palpitesEstatisticos.length}
-            </Badge>
-          </div>
-          {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <LoadingCard key={i} />
-              ))}
-            </div>
-          ) : palpitesEstatisticos.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {palpitesEstatisticos.map((p: PalpiteEstatistico) => (
-                <div key={p.indice_palpite} className="space-y-2 relative">
-                  
-                  {/* Selo dinâmico de Inteligência de Ancoragem Histórica */}
-                  {p.memoria_aplicada && (
-                    <Badge className="absolute -top-2 -right-1 bg-emerald-600 hover:bg-emerald-600 text-white text-[9px] border-none z-10 font-medium">
-                      🧠 Memória Ativa
-                    </Badge>
-                  )}
-
-                  <PalpiteCard
-                    index={p.indice_palpite}
-                    numeros={parseNumbers(p.numeros)}
-                    showSaveButton
-                  />
-                  <div className="flex justify-between items-center px-1">
-                    <div className="flex flex-col gap-0.5">
-                      <div className="flex gap-2 text-[9px] text-muted-foreground font-bold uppercase">
-                        <span>Soma: {p.soma_total || '--'}</span>
-                        <span>P: {p.pares || '--'} / I: {p.impares || '--'}</span>
-                      </div>
-                      
-                      {/* Exibe o indicador de Backtest Real calculado pelo service */}
-                      {p.score_backtest && (
-                        <span className="text-[8px] font-bold text-muted-foreground/70 tracking-wide uppercase flex items-center gap-0.5 font-sans">
-                          <History className="h-2 w-2 text-primary/70" /> Backtest: <span className="font-mono text-primary font-extrabold">{p.score_backtest.toFixed(4)}</span>
-                        </span>
-                      )}
-                    </div>
-                    {p.score > 0 && (
-                      <Badge variant="outline" className="text-[9px] h-4 py-0 leading-none border-primary/20 text-primary font-mono font-bold">
-                        Score: {(p.score * 100).toFixed(2)}%
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <Card className="border-dashed">
-              <CardContent className="p-12 text-center text-muted-foreground">
-                Aguardando a consolidação diária dos palpites adaptativos.
               </CardContent>
             </Card>
           )}
